@@ -309,7 +309,8 @@ jobs:
               echo "Error: aapt path must be a relative path"
               exit 1
             fi
-            if ! [[ "$aapt_path" =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+            # Allow alphanumeric, dots, underscores, hyphens, slashes, and + for filenames
+            if ! [[ "$aapt_path" =~ ^[a-zA-Z0-9._+/-]+$ ]]; then
               echo "Error: aapt path contains invalid characters"
               exit 1
             fi
