@@ -105,8 +105,8 @@ jobs:
       - name: Decompile APK
         run: |
           echo "Decompiling APK with dm2q framework..."
-          # Use -J flag to increase Java heap memory to 6GB for large APKs
-          apktool d --no-debug-info -o decompiled -t dm2q -p apktool-frameworks -JXmx6144M app.apk 
+          # Wrapper now uses 6GB memory by default
+          apktool d --no-debug-info -o decompiled -t dm2q -p apktool-frameworks app.apk 
           if [ ! -d decompiled ]; then
             echo "Error: Decompilation failed"
             exit 1

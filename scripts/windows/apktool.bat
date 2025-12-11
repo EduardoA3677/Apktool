@@ -79,7 +79,31 @@ if "%ATTR:~0,1%"=="-" if "%~x1"==".apk" (
 )
 
 :load
-"%java_exe%" -jar -Xmx1024M -Duser.language=en -Dfile.encoding=UTF8 -Djdk.util.zip.disableZip64ExtraFieldValidation=true -Djdk.nio.zipfs.allowDotZipEntry=true "%~dp0%BASENAME%%max%.jar" %fastCommand% %*
+rem Extract -J prefixed JVM options from command line arguments
+set "javaOpts=-Xmx6144M -Duser.language=en -Dfile.encoding=UTF8 -Djdk.util.zip.disableZip64ExtraFieldValidation=true -Djdk.nio.zipfs.allowDotZipEntry=true"
+set "apktoolArgs="
+
+setlocal EnableDelayedExpansion
+:parse_args
+if "%~1"=="" goto run_apktool
+set "arg=%~1"
+rem Check if argument starts with -J
+if "!arg:~0,2!"=="-J" (
+    rem Extract JVM option (remove -J prefix)
+    set "opt=!arg:~2!"
+    set "javaOpts=!javaOpts! -!opt!"
+    shift
+    goto parse_args
+) else (
+    rem Regular argument - add to apktool args
+    set "apktoolArgs=!apktoolArgs! %1"
+    shift
+    goto parse_args
+)
+
+:run_apktool
+"%java_exe%" -jar !javaOpts! "%~dp0%BASENAME%%max%.jar" %fastCommand% !apktoolArgs!
+endlocal
 
 rem Pause when ran non interactively
 for %%i in (%cmdcmdline%) do if /i "%%~i"=="/c" pause & exit /b
