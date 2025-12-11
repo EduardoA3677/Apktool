@@ -32,16 +32,16 @@ jobs:
           sudo apt-get install -y zram-config
           # Configure zram to use 8GB of compressed RAM
           sudo modprobe zram
-          # Check if zram0 exists, if already configured skip setup
+          # Check if zram0 device is available after module load
           if [ -e /sys/block/zram0/disksize ]; then
             # Create a 8GB zram device
             echo 8G | sudo tee /sys/block/zram0/disksize
-            sudo mkswap /sys/block/zram0
-            sudo swapon /sys/block/zram0
+            sudo mkswap /dev/zram0
+            sudo swapon /dev/zram0
             # Verify zram is active
             echo "Zram configured successfully:"
           else
-            echo "Zram device not available, skipping zram setup"
+            echo "Warning: Zram device not available, skipping zram setup"
           fi
           swapon --show
           free -h
