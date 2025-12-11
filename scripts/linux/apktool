@@ -64,19 +64,19 @@ javaOpts="-Xmx6144M -Dfile.encoding=utf-8 -Djdk.util.zip.disableZip64ExtraFieldV
 # and pass them to Java (instead of to dx). This makes it possible for you to
 # add a command-line parameter such as "-JXmx256M" in your ant scripts, for
 # example. This processes -J options from anywhere in the argument list.
-apktoolArgs=""
+apktoolArgs=()
 while [ $# -gt 0 ]; do
     if expr "x$1" : 'x-J' >/dev/null; then
         opt=`expr "$1" : '-J\(.*\)'`
         javaOpts="${javaOpts} -${opt}"
         shift
     else
-        apktoolArgs="${apktoolArgs} $1"
+        apktoolArgs+=("$1")
         shift
     fi
 done
 # Restore arguments for apktool
-set -- ${apktoolArgs}
+set -- "${apktoolArgs[@]}"
 
 if [ "$OSTYPE" = "cygwin" ] ; then
     jarpath=`cygpath -w  "$libdir/$jarfile"`
