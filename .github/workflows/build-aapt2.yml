@@ -1,6 +1,6 @@
-name: Build AAPT2 Binaries
+name: Build AAPT2 Binaries (Linux)
 
-# This workflow builds aapt2_64 binaries according to INTERNAL.md guide
+# This workflow builds aapt2_64 binaries for Linux according to INTERNAL.md guide
 # WARNING: This requires ~150-250GB of disk space and significant build time
 # Only run manually or on a schedule for official releases
 
@@ -30,8 +30,8 @@ permissions:
   actions: read
 
 jobs:
-  build-linux-windows-aapt2:
-    name: Build Linux and Windows aapt2_64
+  build-linux-aapt2:
+    name: Build Linux aapt2_64
     runs-on: ubuntu-latest
     # Use a container with more disk space or configure cleanup
     timeout-minutes: 720  # 12 hours max
@@ -56,7 +56,7 @@ jobs:
             zip curl zlib1g-dev libc6-dev-i386 libncurses5 \
             x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev \
             libxml2-utils xsltproc unzip fontconfig python3 python3-pip \
-            openjdk-11-jdk mingw-w64
+            openjdk-11-jdk
 
       - name: Set up repo tool
         run: |
@@ -94,12 +94,11 @@ jobs:
           git fetch apktool ${{ inputs.apktool_branch || 'apktool-9.0.0' }} --depth=1
           git checkout apktool/${{ inputs.apktool_branch || 'apktool-9.0.0' }}
 
-      - name: Build aapt2 for Linux and Windows
+      - name: Build aapt2 for Linux
         run: |
           cd ~/aosp
           source build/envsetup.sh
           lunch aosp_cf_x86_64_only_phone-aosp_current-eng
-          # This single build command produces both Linux and Windows binaries
           m aapt2
 
       - name: Strip Linux binaries
@@ -110,16 +109,6 @@ jobs:
           fi
           if [ -f out/host/linux-x86/bin/aapt2_64 ]; then
             strip out/host/linux-x86/bin/aapt2_64
-          fi
-
-      - name: Strip Windows binaries
-        run: |
-          cd ~/aosp
-          if [ -f out/host/windows-x86/bin/aapt2.exe ]; then
-            strip out/host/windows-x86/bin/aapt2.exe
-          fi
-          if [ -f out/host/windows-x86/bin/aapt2_64.exe ]; then
-            strip out/host/windows-x86/bin/aapt2_64.exe
           fi
 
       - name: Verify static linking (Linux)
@@ -142,142 +131,10 @@ jobs:
             ~/aosp/out/host/linux-x86/bin/aapt2_64
           if-no-files-found: error
 
-      - name: Upload Windows aapt2 artifacts
-        uses: actions/upload-artifact@v5
-        with:
-          name: aapt2-windows
-          path: |
-            ~/aosp/out/host/windows-x86/bin/aapt2.exe
-            ~/aosp/out/host/windows-x86/bin/aapt2_64.exe
-          if-no-files-found: error
-
-  build-macos-aapt2:
-    name: Build macOS aapt2_64
-    runs-on: macos-latest
-    timeout-minutes: 720
-
-    steps:
-      - name: Install dependencies
-        run: |
-          brew install git python3 openjdk@11
-          echo "/opt/homebrew/opt/openjdk@11/bin" >> $GITHUB_PATH
-
-      - name: Set up repo tool
-        run: |
-          mkdir -p ~/bin
-          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
-          chmod a+x ~/bin/repo
-          echo "$HOME/bin" >> $GITHUB_PATH
-
-      - name: Configure git
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-          git config --global color.ui false
-
-      - name: Initialize AOSP repo
-        run: |
-          mkdir -p ~/aosp
-          cd ~/aosp
-          repo init -u https://android.googlesource.com/platform/manifest \
-            -b ${{ inputs.android_branch || 'android-16-release' }} \
-            ${{ env.REPO_INIT_FLAGS }}
-
-      - name: Sync AOSP sources
-        run: |
-          cd ~/aosp
-          repo sync -c -j$(sysctl -n hw.ncpu) --no-tags --no-clone-bundle frameworks/base \
-            build/make build/soong prebuilts/build-tools \
-            external/libcxx external/zlib \
-            system/core system/logging
-
-      - name: Checkout modified frameworks/base
-        run: |
-          cd ~/aosp/frameworks/base
-          git remote add apktool https://github.com/iBotPeaches/platform_frameworks_base.git
-          git fetch apktool ${{ inputs.apktool_branch || 'apktool-9.0.0' }} --depth=1
-          git checkout apktool/${{ inputs.apktool_branch || 'apktool-9.0.0' }}
-
-      - name: Apply macOS SDK patch
-        run: |
-          cd ~/aosp
-          # Find the SDK version
-          SDK_PATH=$(find /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs -iname "*.sdk" | head -n 1)
-          if [ -n "$SDK_PATH" ]; then
-            SDK_VERSION=$(basename "$SDK_PATH" .sdk | sed 's/MacOSX//')
-            echo "Detected macOS SDK version: $SDK_VERSION"
-
-            # Patch darwin_host.go if needed
-            if [ -f build/soong/cc/config/darwin_host.go ]; then
-              # Check if SDK version is already in the supported list
-              if ! grep -q "\"$SDK_VERSION\"" build/soong/cc/config/darwin_host.go; then
-                echo "Adding SDK version $SDK_VERSION to supported list"
-                # Backup the file
-                cp build/soong/cc/config/darwin_host.go build/soong/cc/config/darwin_host.go.bak
-                # Add the SDK version to the array
-                # Find the line with darwinSupportedSdkVersions and add our version on the next line
-                awk -v sdk="$SDK_VERSION" '
-                  /darwinSupportedSdkVersions.*=.*\[/ {
-                    print
-                    getline
-                    print "\t\t\"" sdk "\","
-                    print
-                    next
-                  }
-                  { print }
-                ' build/soong/cc/config/darwin_host.go.bak > build/soong/cc/config/darwin_host.go
-                # Verify the patch was applied
-                if grep -q "\"$SDK_VERSION\"" build/soong/cc/config/darwin_host.go; then
-                  echo "✓ SDK version successfully added"
-                else
-                  echo "⚠ Warning: Failed to add SDK version, build may fail"
-                  echo "Please check build/soong/cc/config/darwin_host.go format"
-                fi
-              else
-                echo "SDK version $SDK_VERSION already in supported list"
-              fi
-            else
-              echo "Warning: darwin_host.go not found at expected location"
-            fi
-          else
-            echo "Warning: Could not detect macOS SDK, build may fail"
-          fi
-
-      - name: Build aapt2 for macOS
-        env:
-          ANDROID_JAVA_HOME: /opt/homebrew/opt/openjdk@11
-        run: |
-          cd ~/aosp
-          source build/envsetup.sh
-          lunch aosp_cf_x86_64_only_phone-aosp_current-eng
-          m aapt2
-
-      - name: Strip macOS binary
-        run: |
-          cd ~/aosp
-          if [ -f out/host/darwin-x86/bin/aapt2_64 ]; then
-            strip out/host/darwin-x86/bin/aapt2_64
-          fi
-
-      - name: Verify static linking (macOS)
-        run: |
-          cd ~/aosp
-          echo "Checking aapt2_64 dependencies..."
-          if [ -f out/host/darwin-x86/bin/aapt2_64 ]; then
-            otool -L out/host/darwin-x86/bin/aapt2_64 || echo "Checking dependencies"
-          fi
-
-      - name: Upload macOS aapt2 artifacts
-        uses: actions/upload-artifact@v5
-        with:
-          name: aapt2-macos
-          path: ~/aosp/out/host/darwin-x86/bin/aapt2_64
-          if-no-files-found: error
-
   create-release-summary:
     name: Create Build Summary
     runs-on: ubuntu-latest
-    needs: [build-linux-windows-aapt2, build-macos-aapt2]
+    needs: [build-linux-aapt2]
     if: always()
 
     steps:
@@ -290,7 +147,7 @@ jobs:
         run: |
           echo "## AAPT2 Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Build completed for the following platforms:" >> $GITHUB_STEP_SUMMARY
+          echo "Build completed for the following platform:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ -d artifacts/aapt2-linux ]; then
@@ -299,20 +156,8 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
 
-          if [ -d artifacts/aapt2-windows ]; then
-            echo "### Windows Binaries" >> $GITHUB_STEP_SUMMARY
-            ls -lh artifacts/aapt2-windows/ >> $GITHUB_STEP_SUMMARY || true
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [ -d artifacts/aapt2-macos ]; then
-            echo "### macOS Binaries" >> $GITHUB_STEP_SUMMARY
-            ls -lh artifacts/aapt2-macos/ >> $GITHUB_STEP_SUMMARY || true
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note:** Please verify static linking using \`ldd\` (Linux/Windows) and \`otool -L\` (macOS)" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Please verify static linking using \`ldd\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "See INTERNAL.md for deployment instructions." >> $GITHUB_STEP_SUMMARY
