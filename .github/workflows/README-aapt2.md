@@ -42,7 +42,7 @@ According to `INTERNAL.md`:
 
 - **AOSP**: Currently using `android-16-release`
 - **Apktool frameworks/base**: Branch naming follows Android version
-  - **Naming convention started at Android 7.1** - don't look for older versions
+  - **Naming convention started at Android 7.1** - do not look for older versions
   - Android 7.1 and newer: Uses naming like `apktool_7.1` or `apktool-9.0.0`
   - Current default: `apktool-9.0.0` (Android 9.0 Pie)
 

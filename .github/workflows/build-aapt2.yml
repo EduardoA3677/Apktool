@@ -211,9 +211,15 @@ jobs:
                 # Backup the file
                 cp build/soong/cc/config/darwin_host.go build/soong/cc/config/darwin_host.go.bak
                 # Add the SDK version to the array
-                # This adds it after the darwinSupportedSdkVersions declaration
+                # Find the line with darwinSupportedSdkVersions and add our version on the next line
                 awk -v sdk="$SDK_VERSION" '
-                  /darwinSupportedSdkVersions.*=.*\[/ { print; getline; print "\t\t\"" sdk "\","; print; next }
+                  /darwinSupportedSdkVersions.*=.*\[/ {
+                    print
+                    getline
+                    print "\t\t\"" sdk "\","
+                    print
+                    next
+                  }
                   { print }
                 ' build/soong/cc/config/darwin_host.go.bak > build/soong/cc/config/darwin_host.go
                 # Verify the patch was applied
