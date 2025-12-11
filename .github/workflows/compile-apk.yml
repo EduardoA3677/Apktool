@@ -116,7 +116,7 @@ jobs:
       - name: Compile APK
         run: |
           echo "Compiling APK with dm2q framework..."
-          apktool b decompiled -o compiled.apk
+          apktool b decompiled -p apktool-frameworks -o compiled.apk
           if [ ! -f compiled.apk ]; then
             echo "Error: Compilation failed"
             exit 1
