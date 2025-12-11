@@ -141,8 +141,8 @@ jobs:
       - name: Compile APK
         run: |
           echo "Compiling APK with dm2q framework..."
-          # Build apktool command with optional parameters
-          CMD="apktool b decompiled -p apktool-frameworks -o compiled.apk"
+          # Build apktool command with optional parameters using array
+          CMD=(apktool b decompiled -p apktool-frameworks -o compiled.apk)
           
           # Check mutual exclusivity of quiet and verbose flags
           if [ "${{ github.event.inputs.quiet }}" = "true" ] && [ "${{ github.event.inputs.verbose }}" = "true" ]; then
@@ -152,19 +152,19 @@ jobs:
           
           # Add optional quiet flag
           if [ "${{ github.event.inputs.quiet }}" = "true" ]; then
-            CMD="$CMD -q"
+            CMD+=(-q)
             echo "Using quiet mode (-q)"
           fi
           
           # Add optional verbose flag
           if [ "${{ github.event.inputs.verbose }}" = "true" ]; then
-            CMD="$CMD -v"
+            CMD+=(-v)
             echo "Using verbose mode (-v)"
           fi
           
           # Add optional force flag
           if [ "${{ github.event.inputs.force }}" = "true" ]; then
-            CMD="$CMD -f"
+            CMD+=(-f)
             echo "Using force mode (-f)"
           fi
           
@@ -175,7 +175,7 @@ jobs:
               echo "Error: jobs must be a positive integer"
               exit 1
             fi
-            CMD="$CMD -j ${{ github.event.inputs.jobs }}"
+            CMD+=(-j "${{ github.event.inputs.jobs }}")
             echo "Using ${{ github.event.inputs.jobs }} parallel jobs"
           fi
           
@@ -185,18 +185,23 @@ jobs:
             for lib in "${LIBS[@]}"; do
               # Trim whitespace
               lib=$(echo "$lib" | xargs)
-              # Validate format: package:file
+              # Validate format: package:file and prevent path traversal
               if ! [[ "$lib" =~ ^[a-zA-Z0-9._-]+:[a-zA-Z0-9._/-]+$ ]]; then
                 echo "Error: lib format must be package:file (got: $lib)"
                 exit 1
               fi
-              CMD="$CMD -l $(printf '%q' "$lib")"
+              # Check for path traversal sequences
+              if [[ "$lib" == *".."* ]]; then
+                echo "Error: lib path cannot contain '..' sequences"
+                exit 1
+              fi
+              CMD+=(-l "$lib")
               echo "Using shared library: $lib"
             done
           fi
           
-          echo "Executing: $CMD"
-          eval $CMD
+          echo "Executing: ${CMD[@]}"
+          "${CMD[@]}"
           
           if [ ! -f compiled.apk ]; then
             echo "Error: Compilation failed"
