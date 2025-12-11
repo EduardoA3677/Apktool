@@ -1,19 +1,19 @@
-# Building aapt2_64 for Android 16
+# Building aapt2_64 for Android 16 and Apktool
 
-This document explains how to use the GitHub Actions workflow to build aapt2_64 binaries for Android 16.
+This document explains how to use the GitHub Actions workflow to build aapt2_64 binaries for Android 16 and compile Apktool with the newly built binaries.
 
 ## Overview
 
-The `build-aapt2-android16.yml` workflow automates the process described in `INTERNAL.md` for building modified aapt2 binaries for Apktool from AOSP (Android Open Source Project) source code.
+The `build-aapt2-android16.yml` workflow automates the process described in `INTERNAL.md` for building modified aapt2 binaries for Apktool from AOSP (Android Open Source Project) source code, and then uses those binaries to build Apktool.
 
 ## Workflow Features
 
 - **Automated AOSP Download**: Uses repo tool to download AOSP with optimizations (partial clone, current branch only)
-- **Multi-Platform Builds**: Builds for Linux, Windows, and macOS in separate jobs
+- **Linux-only Build**: Builds aapt2 and aapt2_64 for Linux x86_64
 - **Modified frameworks/base**: Automatically integrates Apktool's modified frameworks/base from iBotPeaches/platform_frameworks_base
-- **macOS SDK Patching**: Automatically detects and patches macOS SDK version compatibility
 - **Binary Verification**: Checks that binaries are statically linked
-- **Artifact Packaging**: Combines all platform binaries into a single downloadable package
+- **Apktool Build**: Compiles Apktool using the newly built aapt2_64 binaries
+- **Automatic Release**: Creates a GitHub release with all artifacts using the TEST token
 
 ## Prerequisites
 
@@ -24,13 +24,16 @@ The `build-aapt2-android16.yml` workflow automates the process described in `INT
 **Options:**
 1. **Self-hosted runners**: Set up self-hosted runners with sufficient disk space
 2. **Modify workflow**: Adapt the workflow to use cloud storage or build specific components
-3. **Split builds**: Run builds separately with cleanup between platforms
 
 ### Repository Access
 
 The workflow needs access to:
 - AOSP repositories at `https://android.googlesource.com`
 - Modified frameworks/base at `https://github.com/iBotPeaches/platform_frameworks_base`
+
+### Secrets
+
+The workflow requires the `TEST` secret to be configured in the repository settings for creating releases.
 
 ## How to Use
 
@@ -42,31 +45,30 @@ The workflow uses `workflow_dispatch`, meaning it must be manually triggered:
 2. Select **"Build aapt2_64 for Android 16"** from the workflows list
 3. Click **"Run workflow"**
 4. Configure the inputs:
-   - **Apktool frameworks/base branch**: Branch name from iBotPeaches/platform_frameworks_base (e.g., `apktool-16.0`)
+   - **Apktool frameworks/base branch**: Branch name from iBotPeaches/platform_frameworks_base (default: `apktool-3.0.x`)
    - **AOSP tag/branch**: AOSP branch or tag to use (default: `android-16-release`)
 5. Click **"Run workflow"** to start
 
 ### 2. Monitor Progress
 
-The workflow has three jobs:
+The workflow has one main job that:
 
-1. **build-linux-windows**: Builds Linux and Windows binaries (~2-4 hours depending on runner)
-2. **build-macos**: Builds macOS binaries (~2-4 hours depending on runner)
-3. **verify-and-package**: Combines and packages all binaries
+1. Builds aapt2 and aapt2_64 for Linux (~2-4 hours depending on runner)
+2. Copies the binaries to Apktool's prebuilt directory
+3. Builds Apktool using the new binaries
+4. Creates a GitHub release with all artifacts
 
-Each job can be monitored individually in the Actions UI.
+Progress can be monitored in the Actions UI.
 
 ### 3. Download Artifacts
 
-Once the workflow completes, artifacts will be available:
+Once the workflow completes, a new release will be created automatically with:
 
-- **aapt2-linux-android16**: Linux binaries (aapt2, aapt2_64)
-- **aapt2-windows-android16**: Windows binaries (aapt2.exe, aapt2_64.exe)
-- **aapt2-macos-android16**: macOS binary (aapt2_64)
-- **aapt2-android16-all-platforms**: Combined tarball with all platforms
-- **aapt2-android16-package**: Unpacked directory structure with README
+- **aapt2**: Linux aapt2 binary
+- **aapt2_64**: Linux aapt2_64 binary
+- **apktool-*.jar**: Apktool JAR file built with the new aapt2_64
 
-Download the artifacts from the workflow run summary page.
+Download the artifacts from the Releases page.
 
 ## Workflow Configuration
 
@@ -74,7 +76,7 @@ Download the artifacts from the workflow run summary page.
 
 | Parameter | Description | Default | Required |
 |-----------|-------------|---------|----------|
-| `apktool_branch` | Branch from iBotPeaches/platform_frameworks_base to use | `apktool-16.0` | Yes |
+| `apktool_branch` | Branch from iBotPeaches/platform_frameworks_base to use | `apktool-3.0.x` | Yes |
 | `android_tag` | AOSP branch or tag to build from | `android-16-release` | Yes |
 
 ### Environment Variables
@@ -85,7 +87,7 @@ The workflow sets these environment variables:
 
 ## Build Process
 
-### Linux/Windows Build (build-linux-windows job)
+### Single Unified Job (build-aapt2-and-apktool)
 
 1. Install build dependencies (build-essential, flex, bison, etc.)
 2. Install repo tool
@@ -95,32 +97,14 @@ The workflow sets these environment variables:
 6. Build aapt2 using `lunch` and `m aapt2`
 7. Strip binaries to reduce size
 8. Verify binaries are statically linked using `ldd`
-9. Upload artifacts
-
-### macOS Build (build-macos job)
-
-1. Install Xcode command line tools and dependencies
-2. Install repo tool
-3. Initialize and sync AOSP repository
-4. Replace frameworks/base with Apktool's modified version
-5. **Apply macOS SDK patch**: Automatically detect SDK version and patch `darwin_host.go`
-6. Set `ANDROID_JAVA_HOME` environment variable
-7. Build aapt2
-8. Strip binary
-9. Verify binary using `otool -L`
-10. Upload artifact
-
-### Verify and Package (verify-and-package job)
-
-1. Download all platform artifacts
-2. Organize into directory structure
-3. Create README with build information
-4. Package into tarball
-5. Upload combined package
+9. Copy binaries to Apktool's prebuilt/linux directory
+10. Build Apktool using Gradle (build, shadowJar, proguard)
+11. Prepare release artifacts (aapt2, aapt2_64, apktool jar)
+12. Create GitHub release with all artifacts
 
 ## Verification
 
-After downloading the binaries, verify they are statically linked:
+After the build completes, the workflow automatically verifies that binaries are statically linked:
 
 ### Linux
 ```bash
@@ -128,29 +112,23 @@ ldd aapt2_64
 # Should show "not a dynamic executable" or minimal dependencies
 ```
 
-### macOS
-```bash
-otool -L aapt2_64
-# Should show only system libraries (libc++, libsystem, etc.)
-```
+## Releases
 
-### Windows
-Use Dependency Walker or similar tools to check for minimal dependencies.
+The workflow automatically creates a GitHub release with:
+- Tag name: `android-16-{build_number}`
+- Release name: `Apktool with aapt2_64 for Android 16 (Build {build_number})`
+- Files:
+  - `aapt2` - Linux aapt2 binary
+  - `aapt2_64` - Linux aapt2_64 binary  
+  - `apktool-*.jar` - Apktool JAR built with the new binaries
 
 ## Troubleshooting
 
 ### Disk Space Issues
 
 If builds fail due to disk space:
-- Use self-hosted runners with larger disks
-- Consider building platforms separately
-- Clean up between builds
-
-### SDK Version Issues (macOS)
-
-The workflow automatically patches the SDK version. If this fails:
-- Check the macOS SDK version installed on the runner
-- Manually verify the patch in `build/soong/cc/config/darwin_host.go`
+- Use self-hosted runners with larger disks (minimum 300GB recommended)
+- Clean up between builds if running multiple times
 
 ### Build Failures
 
@@ -166,25 +144,12 @@ If binaries are not found after build:
 - Verify the output paths match AOSP's structure
 - Check if the `lunch` command selected the correct target
 
-## Integration with Apktool
+### Release Creation Failures
 
-To use the built binaries with Apktool:
-
-1. Download the `aapt2-android16-all-platforms` artifact
-2. Extract the tarball
-3. Copy binaries to Apktool's prebuilt directory:
-   ```bash
-   cp linux/aapt2_64 /path/to/apktool/brut.apktool/apktool-lib/src/main/resources/prebuilt/linux/
-   cp windows/aapt2_64.exe /path/to/apktool/brut.apktool/apktool-lib/src/main/resources/prebuilt/windows/
-   cp macos/aapt2_64 /path/to/apktool/brut.apktool/apktool-lib/src/main/resources/prebuilt/macosx/
-   ```
-
-## References
-
-- **INTERNAL.md**: Original build instructions in this repository
-- **AOSP Build Guide**: https://source.android.com/source/building
-- **Repo Tool**: https://source.android.com/source/downloading
-- **iBotPeaches/platform_frameworks_base**: https://github.com/iBotPeaches/platform_frameworks_base
+If release creation fails:
+- Verify the `TEST` secret is configured in repository settings
+- Check that the token has permissions to create releases
+- Ensure the tag doesn't already exist
 
 ## Notes
 
@@ -192,6 +157,7 @@ To use the built binaries with Apktool:
 - For other Android versions, adjust the `android_tag` and `apktool_branch` inputs
 - Build times vary significantly based on runner performance and network speed
 - The first sync of AOSP will take considerable time due to the large download size
+- Only Linux binaries are built; macOS and Windows builds have been removed for simplicity
 
 ## Support
 
