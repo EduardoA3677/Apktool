@@ -96,8 +96,8 @@ if %errorlevel% equ 0 (
     shift
     goto parse_args
 ) else (
-    rem Regular argument - add to apktool args
-    set "apktoolArgs=%apktoolArgs% "%~1""
+    rem Regular argument - add to apktool args, preserve original quoting with %1
+    set apktoolArgs=%apktoolArgs% %1
     shift
     goto parse_args
 )
