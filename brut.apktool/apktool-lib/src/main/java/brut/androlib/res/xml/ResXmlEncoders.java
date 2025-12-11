@@ -41,7 +41,7 @@ public final class ResXmlEncoders {
                 return data != 0 ? String.format("@0x%08x", data) : "@null";
             case TypedValue.TYPE_ATTRIBUTE:
             case TypedValue.TYPE_DYNAMIC_ATTRIBUTE:
-                return data != 0 ? String.format("?0x%08x", data) : "?null";
+                return String.format("?0x%08x", data);
             case TypedValue.TYPE_STRING:
                 throw new IllegalArgumentException("Unexpected data type: TYPE_STRING");
             case TypedValue.TYPE_FLOAT:
