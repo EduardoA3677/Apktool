@@ -169,13 +169,17 @@ jobs:
           
           # Add optional jobs parameter with validation
           if [ -n "${{ github.event.inputs.jobs }}" ]; then
-            # Validate that jobs is a positive integer
-            if ! [[ "${{ github.event.inputs.jobs }}" =~ ^[1-9][0-9]*$ ]]; then
-              echo "Error: jobs must be a positive integer"
+            # Validate that jobs is a non-negative integer (0 means auto-detect)
+            if ! [[ "${{ github.event.inputs.jobs }}" =~ ^[0-9]+$ ]]; then
+              echo "Error: jobs must be a non-negative integer (0 for auto-detect)"
               exit 1
             fi
             CMD+=(-j "${{ github.event.inputs.jobs }}")
-            echo "Using ${{ github.event.inputs.jobs }} parallel jobs"
+            if [ "${{ github.event.inputs.jobs }}" = "0" ]; then
+              echo "Using auto-detect for parallel jobs"
+            else
+              echo "Using ${{ github.event.inputs.jobs }} parallel jobs"
+            fi
           fi
           
           # Add optional lib parameter (can be multiple, comma-separated) with validation
