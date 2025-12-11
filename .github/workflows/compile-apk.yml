@@ -299,13 +299,22 @@ jobs:
           
           # Add optional aapt parameter with validation
           if [ -n "${{ github.event.inputs.aapt }}" ]; then
-            # Validate path doesn't contain path traversal
-            if [[ "${{ github.event.inputs.aapt }}" == *".."* ]]; then
+            # Validate path format and prevent traversal
+            aapt_path="${{ github.event.inputs.aapt }}"
+            if [[ "$aapt_path" == *".."* ]]; then
               echo "Error: aapt path cannot contain '..' sequences"
               exit 1
             fi
-            CMD+=(--aapt "${{ github.event.inputs.aapt }}")
-            echo "Using custom aapt2 binary: ${{ github.event.inputs.aapt }}"
+            if [[ "$aapt_path" == /* ]] || [[ "$aapt_path" == ~* ]]; then
+              echo "Error: aapt path must be a relative path"
+              exit 1
+            fi
+            if ! [[ "$aapt_path" =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+              echo "Error: aapt path contains invalid characters"
+              exit 1
+            fi
+            CMD+=(--aapt "$aapt_path")
+            echo "Using custom aapt2 binary: $aapt_path"
           fi
           
           echo "Executing: ${CMD[@]}"

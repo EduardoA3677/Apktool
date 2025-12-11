@@ -294,8 +294,17 @@ jobs:
               echo "Error: res-resolve-mode conflicts with only-manifest"
               exit 1
             fi
-            CMD+=(--res-resolve-mode "${{ github.event.inputs.res_resolve_mode }}")
-            echo "Using resource resolve mode: ${{ github.event.inputs.res_resolve_mode }}"
+            # Validate res_resolve_mode value
+            case "${{ github.event.inputs.res_resolve_mode }}" in
+              remove|dummy|keep)
+                CMD+=(--res-resolve-mode "${{ github.event.inputs.res_resolve_mode }}")
+                echo "Using resource resolve mode: ${{ github.event.inputs.res_resolve_mode }}"
+                ;;
+              *)
+                echo "Error: Invalid res-resolve-mode. Must be 'remove', 'dummy', or 'keep'"
+                exit 1
+                ;;
+            esac
           fi
           
           # Add optional keep-broken-res flag
