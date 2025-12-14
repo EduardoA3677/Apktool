@@ -462,13 +462,8 @@ jobs:
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/$TARGET_USER/$REPO_NAME.git"
           git branch -M main
           
-          # Push with git lfs if there are tracked files
-          if git lfs ls-files | grep -q .; then
-            echo "Pushing LFS files..."
-            git lfs push origin main --all
-          else
-            echo "No LFS files to push"
-          fi
+          # Push to remote (Git LFS pre-push hook will automatically handle LFS files)
+          echo "Pushing content to repository..."
           git push -u origin main
 
           echo "✅ Decompiled content pushed successfully to: https://github.com/$TARGET_USER/$REPO_NAME"
