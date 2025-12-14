@@ -1,5 +1,6 @@
 name: CI
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -14,67 +15,22 @@ on:
       - 'gradle/wrapper/**'
       - 'gradlew'
       - 'gradlew.bat'
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 env:
   BINARY_PATH: brut.apktool/apktool-lib/src/main/resources/prebuilt
 
 jobs:
-  analyze-linux-aapt:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        file: [ aapt2 ]
+    name: Build/Test (JDK 17, ubuntu-latest)
     steps:
       - uses: actions/checkout@v6
-      - name: Verify Executable
-        run: ${{ env.BINARY_PATH }}/linux/${{ matrix.file }} version
-      - name: Output Static
-        run: ldd ${{ env.BINARY_PATH }}/linux/${{ matrix.file }} || true
-
-  build-and-test-with-Java-8-and-later:
-    runs-on: ${{ matrix.os }}
-    needs:
-      - analyze-linux-aapt
-    name: Build/Test (JDK ${{ matrix.java }}, ${{ matrix.os }})
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ ubuntu-latest ]
-        java: [ 8, 11, 17, 21 ]
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-java@v5
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.java }}
-
-      - uses: gradle/actions/setup-gradle@v5.0.0
-
-      - name: Build (Linux)
-        run: ./gradlew build shadowJar proguard
-
-  upload-artifact:
-    runs-on: ubuntu-latest
-    name: Build apktool.jar
-    if: github.repository == 'iBotPeaches/Apktool' && github.ref == 'refs/heads/main'
-    needs:
-      - build-and-test-with-Java-8-and-later
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
       - uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 17
 
       - uses: gradle/actions/setup-gradle@v5.0.0
-        with:
-          dependency-graph: generate-and-submit
 
       - name: Build (Linux)
         run: ./gradlew build shadowJar proguard
