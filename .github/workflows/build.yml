@@ -120,3 +120,31 @@ jobs:
         with:
           name: apktool.jar
           path: brut.apktool/apktool-cli/build/libs/apktool-v*
+
+      - name: Get version
+        id: get_version
+        run: |
+          VERSION=$(ls brut.apktool/apktool-cli/build/libs/apktool-*.jar | head -1 | sed 's/.*apktool-\(.*\)\.jar/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TEST }}
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          release_name: Release v${{ steps.get_version.outputs.version }}
+          draft: false
+          prerelease: false
+
+      - name: Upload apktool.jar to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TEST }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: brut.apktool/apktool-cli/build/libs/apktool-${{ steps.get_version.outputs.version }}.jar
+          asset_name: apktool.jar
+          asset_content_type: application/java-archive
