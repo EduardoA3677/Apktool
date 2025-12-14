@@ -125,12 +125,14 @@ jobs:
           # Get the latest release info
           LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
           
-          # Extract download URLs
-          JAR_URL=$(echo "$LATEST_RELEASE" | grep -oP '"browser_download_url":\s*"\K[^"]*apktool\.jar[^"]*' | head -1)
-          SCRIPT_URL=$(echo "$LATEST_RELEASE" | grep -oP '"browser_download_url":\s*"\K[^"]*(?<!\.jar)"' | grep 'apktool$' | head -1)
+          # Extract download URLs using jq for reliable JSON parsing
+          JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -1)
+          SCRIPT_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name == "apktool") | .browser_download_url' | head -1)
           
           if [ -z "$JAR_URL" ] || [ -z "$SCRIPT_URL" ]; then
             echo "Error: Could not find apktool.jar or script in latest release"
+            echo "JAR_URL: $JAR_URL"
+            echo "SCRIPT_URL: $SCRIPT_URL"
             exit 1
           fi
           
