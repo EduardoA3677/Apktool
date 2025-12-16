@@ -259,8 +259,13 @@ jobs:
         run: |
           echo "Installing additional DEX deobfuscation tools..."
           
-          # Install Dedexer for DEX analysis
+          # Install Dedexer for DEX analysis with verification
           wget -q https://sourceforge.net/projects/dedexer/files/dedexer/dedexer-2.3.jar/download -O dedexer.jar
+          if [ ! -f dedexer.jar ] || [ ! -s dedexer.jar ]; then
+            echo "Warning: Dedexer download failed or file is empty"
+          else
+            echo "Dedexer downloaded successfully"
+          fi
           
           # Install LIEF for binary analysis
           pip install --quiet lief pyelftools
@@ -469,6 +474,9 @@ jobs:
           import os
           import json
           
+          # Constants for limiting output size
+          MAX_FUNCTIONS_PER_BINARY = 100  # Limit functions to prevent huge JSON files
+          
           results = {}
           
           if os.path.exists("so-extraction/lib"):
@@ -490,13 +498,17 @@ jobs:
                                       'sections': []
                                   }
                                   
-                                  # Get exported functions
+                                  # Get exported functions (limited to prevent huge output)
                                   if hasattr(binary, 'exported_functions'):
-                                      analysis['exported_functions'] = [f.name for f in binary.exported_functions[:50]]  # Limit to 50
+                                      analysis['exported_functions'] = [f.name for f in binary.exported_functions[:MAX_FUNCTIONS_PER_BINARY]]
+                                      if len(binary.exported_functions) > MAX_FUNCTIONS_PER_BINARY:
+                                          analysis['exported_functions_truncated'] = f"Showing {MAX_FUNCTIONS_PER_BINARY} of {len(binary.exported_functions)}"
                                   
-                                  # Get imported functions
+                                  # Get imported functions (limited to prevent huge output)
                                   if hasattr(binary, 'imported_functions'):
-                                      analysis['imported_functions'] = [f.name for f in binary.imported_functions[:50]]  # Limit to 50
+                                      analysis['imported_functions'] = [f.name for f in binary.imported_functions[:MAX_FUNCTIONS_PER_BINARY]]
+                                      if len(binary.imported_functions) > MAX_FUNCTIONS_PER_BINARY:
+                                          analysis['imported_functions_truncated'] = f"Showing {MAX_FUNCTIONS_PER_BINARY} of {len(binary.imported_functions)}"
                                   
                                   # Get sections
                                   if hasattr(binary, 'sections'):
@@ -1105,6 +1117,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **Crypto pattern detection**: Encryption/obfuscation analysis (output in \`crypto-analysis/\`)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **DEX decryption analyzer**: Advanced encryption detection (output in \`decryption-analysis/\`)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ **DexHunter**: Unpacking and hidden DEX extraction capabilities" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Decompilation completed successfully!" >> $GITHUB_STEP_SUMMARY
