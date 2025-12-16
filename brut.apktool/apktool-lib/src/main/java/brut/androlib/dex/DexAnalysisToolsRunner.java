@@ -28,16 +28,12 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
 
 /**
  * Runner for additional DEX analysis tools (dex2jar, jadx, smali/baksmali, Androguard)
  */
 public class DexAnalysisToolsRunner {
     private static final Logger LOGGER = Logger.getLogger(DexAnalysisToolsRunner.class.getName());
-    
-    // Pattern to detect potentially dangerous characters in file paths
-    private static final Pattern SAFE_PATH_PATTERN = Pattern.compile("^[a-zA-Z0-9._/\\-]+$");
 
     private final ExtFile mApkFile;
     private final File mOutputDir;
