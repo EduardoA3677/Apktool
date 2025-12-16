@@ -190,13 +190,7 @@ jobs:
         run: |
           echo "Extracting DEX files from APK..."
           mkdir -p dex-files
-          unzip -j app.apk '*.dex' -d dex-files/ 2>/dev/null || echo "No DEX files found or extraction completed"
-          if [ -z "$(ls -A dex-files/ | grep '\.dex$')" ]; then
-            echo "Warning: No DEX files extracted"
-          else
-            echo "DEX files extracted successfully:"
-            ls -lh dex-files/
-          fi
+          apktool d --no-src --keep-broken-res -t dm2q -p apktool-frameworks -o dex-files
 
       - name: Install dex2jar
         run: |
