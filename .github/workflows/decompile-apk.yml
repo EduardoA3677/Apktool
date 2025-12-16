@@ -308,7 +308,8 @@ jobs:
                   for dex_file in dex_files:
                       if dex_file.endswith('.dex'):
                           dex_path = os.path.join("dex-files", dex_file)
-                          d = DEX(dex_path)
+                          with open(dex_path, 'rb') as f:
+                              d = DEX(f.read())
                           dex_objects[dex_file] = d
                           dex_info.append({
                               "file": dex_file,
