@@ -709,9 +709,34 @@ jobs:
           git lfs version || (sudo apt-get update && sudo apt-get install -y git-lfs)
           echo "Git LFS installed successfully"
 
+      - name: Prepare output directory
+        run: |
+          echo "Creating output directory and organizing analysis results..."
+          mkdir -p out
+          
+          # Copy all analysis outputs to the out directory
+          echo "Copying apktool decompilation output..."
+          cp -r apktool out/ || echo "apktool directory not found"
+          
+          echo "Copying DEX analysis outputs..."
+          cp -r dex-files out/ || echo "dex-files not found"
+          cp -r dex2jar-output out/ || echo "dex2jar-output not found"
+          cp -r jadx-output out/ || echo "jadx-output not found"
+          cp -r baksmali-output out/ || echo "baksmali-output not found"
+          cp -r androguard-output out/ || echo "androguard-output not found"
+          cp -r apkid-output out/ || echo "apkid-output not found"
+          cp -r simplify-output out/ || echo "simplify-output not found"
+          
+          echo "Copying native library and security analysis outputs..."
+          cp -r so-analysis out/ || echo "so-analysis not found"
+          cp -r crypto-analysis out/ || echo "crypto-analysis not found"
+          
+          echo "Output directory prepared successfully"
+          ls -la out/
+
       - name: Track large files with Git LFS
         run: |
-          cd apktool
+          cd out
           
           # Initialize git repository first (needed for git lfs)
           git init
@@ -754,11 +779,7 @@ jobs:
           TARGET_USER: ${{ github.event.inputs.target_username }}
           REPO_NAME: ${{ steps.create-repo.outputs.final_repo_name }}
         run: |
-          cd apktool
-          
-          # Copy DEX analysis folders to the apktool directory
-          echo "Copying DEX analysis outputs..."
-          cp -r ../dex-files ../dex2jar-output ../jadx-output ../baksmali-output ../androguard-output ../apkid-output ../simplify-output ../so-analysis ../crypto-analysis ./ || echo "Some analysis outputs may not exist"
+          cd out
           
           # Add all files (git lfs will handle large files automatically)
           git add .
@@ -792,9 +813,23 @@ jobs:
           echo "- **Package**: ${{ steps.package-name.outputs.package }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Repository**: [${{ github.event.inputs.target_username }}/${{ steps.create-repo.outputs.final_repo_name }}](https://github.com/${{ github.event.inputs.target_username }}/${{ steps.create-repo.outputs.final_repo_name }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Directory Structure" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All analysis outputs are organized in the repository root:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`apktool/\` - Main APK decompilation (resources, smali, manifest, etc.)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`dex-files/\` - Extracted DEX files" >> $GITHUB_STEP_SUMMARY
+          echo "- \`dex2jar-output/\` - DEX to JAR conversions" >> $GITHUB_STEP_SUMMARY
+          echo "- \`jadx-output/\` - Java source code decompilation" >> $GITHUB_STEP_SUMMARY
+          echo "- \`baksmali-output/\` - Smali disassembly" >> $GITHUB_STEP_SUMMARY
+          echo "- \`androguard-output/\` - APK analysis JSON reports" >> $GITHUB_STEP_SUMMARY
+          echo "- \`apkid-output/\` - Protection detection reports" >> $GITHUB_STEP_SUMMARY
+          echo "- \`simplify-output/\` - Deobfuscated DEX files" >> $GITHUB_STEP_SUMMARY
+          echo "- \`so-analysis/\` - Native library analysis" >> $GITHUB_STEP_SUMMARY
+          echo "- \`crypto-analysis/\` - Encryption pattern detection" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "### DEX Analysis Tools Used" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ **apktool**: APK decompilation (output in root \`apktool/\` directory)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **apktool**: APK decompilation (output in \`apktool/\` directory)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **dex2jar**: DEX to JAR conversion (output in \`dex2jar-output/\`)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **jadx**: Java decompilation (output in \`jadx-output/\`)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **baksmali**: DEX disassembly (output in \`baksmali-output/\`)" >> $GITHUB_STEP_SUMMARY
