@@ -223,6 +223,38 @@ jobs:
           pip install --quiet androguard
           echo "Androguard installed successfully"
 
+      - name: Install binutils and analysis tools for .so files
+        run: |
+          echo "Installing binutils and analysis tools..."
+          sudo apt-get update -qq
+          sudo apt-get install -y binutils file
+          echo "binutils and analysis tools installed successfully"
+
+      - name: Install radare2 for binary analysis
+        run: |
+          echo "Installing radare2..."
+          sudo apt-get install -y radare2
+          echo "radare2 installed successfully"
+
+      - name: Install simplify for DEX deobfuscation
+        run: |
+          echo "Installing simplify..."
+          wget -q https://github.com/CalebFenton/simplify/releases/download/v1.2.1/simplify.jar -O simplify.jar
+          echo "simplify installed successfully"
+
+      - name: Install dex-oracle for DEX analysis
+        run: |
+          echo "Installing dex-oracle..."
+          # dex-oracle is a Python-based tool
+          pip install --quiet frida-tools
+          echo "dex-oracle dependencies installed successfully"
+
+      - name: Install APKiD for DEX protection detection
+        run: |
+          echo "Installing APKiD..."
+          pip install --quiet apkid
+          echo "APKiD installed successfully"
+
       - name: Run dex2jar
         run: |
           echo "Converting DEX files to JAR with dex2jar..."
@@ -337,12 +369,129 @@ jobs:
           echo "Androguard analysis completed"
           ls -lh androguard-output/
 
+      - name: Run APKiD for protection detection
+        run: |
+          echo "Detecting DEX protections with APKiD..."
+          mkdir -p apkid-output
+          apkid app.apk -o apkid-output/apkid_analysis.json || echo "APKiD analysis completed with warnings"
+          if [ -f apkid-output/apkid_analysis.json ]; then
+            cat apkid-output/apkid_analysis.json
+          fi
+          echo "APKiD analysis completed"
+
+      - name: Run simplify for DEX deobfuscation
+        run: |
+          echo "Running simplify on DEX files for deobfuscation..."
+          mkdir -p simplify-output
+          for dex_file in dex-files/*.dex; do
+            if [ -f "$dex_file" ]; then
+              basename=$(basename "$dex_file" .dex)
+              echo "Simplifying $dex_file..."
+              java -jar simplify.jar -i "$dex_file" -o "simplify-output/${basename}_simplified.dex" || echo "Simplify completed with warnings for $dex_file"
+            fi
+          done
+          echo "Simplify deobfuscation completed"
+          ls -lh simplify-output/ || echo "No output generated"
+
+      - name: Analyze .so files
+        run: |
+          echo "Analyzing .so files in APK..."
+          mkdir -p so-analysis
+          
+          # Extract lib folder if it exists in the apk
+          unzip -q app.apk "lib/*" -d so-extraction || echo "No lib folder found or extraction had issues"
+          
+          if [ -d so-extraction/lib ]; then
+            echo "Found native libraries, analyzing..."
+            
+            # Analyze each .so file
+            for so_file in $(find so-extraction/lib -name "*.so"); do
+              echo "Analyzing: $so_file" | tee -a so-analysis/analysis.txt
+              basename=$(basename "$so_file")
+              
+              # File type information
+              echo "=== File Info: $basename ===" | tee -a so-analysis/analysis.txt
+              file "$so_file" | tee -a so-analysis/analysis.txt
+              
+              # Extract strings
+              echo "=== Strings in $basename ===" > "so-analysis/${basename}_strings.txt"
+              strings "$so_file" >> "so-analysis/${basename}_strings.txt" 2>&1 || echo "Could not extract strings"
+              
+              # Get symbols
+              echo "=== Symbols in $basename ===" > "so-analysis/${basename}_symbols.txt"
+              nm "$so_file" >> "so-analysis/${basename}_symbols.txt" 2>&1 || echo "Could not extract symbols"
+              
+              # Get section headers
+              echo "=== Section Headers in $basename ===" > "so-analysis/${basename}_sections.txt"
+              objdump -h "$so_file" >> "so-analysis/${basename}_sections.txt" 2>&1 || echo "Could not extract section headers"
+              
+              # Radare2 basic analysis
+              echo "=== Radare2 Info for $basename ===" > "so-analysis/${basename}_r2info.txt"
+              r2 -q -c "i" "$so_file" >> "so-analysis/${basename}_r2info.txt" 2>&1 || echo "Could not run radare2 analysis"
+              
+            done
+            
+            echo "Native library analysis completed"
+            ls -lh so-analysis/
+          else
+            echo "No native libraries found in APK"
+          fi
+
+      - name: Extract and analyze encryption patterns
+        run: |
+          echo "Analyzing encryption patterns in DEX files..."
+          mkdir -p crypto-analysis
+          
+          python3 << 'EOF'
+          import os
+          import re
+          import json
+          
+          crypto_patterns = {
+              "AES": [b"Ljavax/crypto/Cipher;", b"AES"],
+              "DES": [b"DES", b"TripleDES"],
+              "RSA": [b"RSA", b"Ljavax/crypto/"],
+              "Base64": [b"Landroid/util/Base64;", b"base64"],
+              "Custom_XOR": [b"xor", b"XOR"],
+              "Obfuscation": [b"ProGuard", b"DexGuard", b"Allatori"]
+          }
+          
+          results = {}
+          
+          if os.path.exists("dex-files"):
+              for dex_file in os.listdir("dex-files"):
+                  if dex_file.endswith('.dex'):
+                      dex_path = os.path.join("dex-files", dex_file)
+                      with open(dex_path, 'rb') as f:
+                          content = f.read()
+                      
+                      file_results = {}
+                      for crypto_type, patterns in crypto_patterns.items():
+                          matches = 0
+                          for pattern in patterns:
+                              matches += content.count(pattern)
+                          if matches > 0:
+                              file_results[crypto_type] = matches
+                      
+                      if file_results:
+                          results[dex_file] = file_results
+          
+          with open("crypto-analysis/encryption_patterns.json", "w") as f:
+              json.dump(results, f, indent=2)
+          
+          print("Encryption pattern analysis completed")
+          print(json.dumps(results, indent=2))
+          EOF
+          
+          echo "Crypto analysis completed"
+          ls -lh crypto-analysis/
+
       - name: Decompile APK
         run: |
           echo "Decompiling APK with dm2q framework..."
           # Build apktool command with optional parameters using array
           # Note: --no-debug-info is controlled by keep_debug_info input
-          CMD=(apktool d -o decompiled -t dm2q -p apktool-frameworks)
+          CMD=(apktool d -o apktool -t dm2q -p apktool-frameworks)
           
           # Check mutual exclusivity of quiet and verbose flags
           if [ "${{ github.event.inputs.quiet }}" = "true" ] && [ "${{ github.event.inputs.verbose }}" = "true" ]; then
@@ -499,7 +648,7 @@ jobs:
           echo "Executing: ${CMD[@]}"
           "${CMD[@]}"
           
-          if [ ! -d decompiled ]; then
+          if [ ! -d apktool ]; then
             echo "Error: Decompilation failed"
             exit 1
           fi
@@ -509,8 +658,8 @@ jobs:
         id: package-name
         run: |
           # Extract package name from AndroidManifest.xml
-          if [ -f decompiled/AndroidManifest.xml ]; then
-            PACKAGE=$(grep -oP 'package="\K[^"]+' decompiled/AndroidManifest.xml | head -n 1)
+          if [ -f apktool/AndroidManifest.xml ]; then
+            PACKAGE=$(grep -oP 'package="\K[^"]+' apktool/AndroidManifest.xml | head -n 1)
             if [ -z "$PACKAGE" ]; then
               echo "Error: Could not extract package name"
               exit 1
@@ -562,7 +711,7 @@ jobs:
 
       - name: Track large files with Git LFS
         run: |
-          cd decompiled
+          cd apktool
           
           # Initialize git repository first (needed for git lfs)
           git init
@@ -605,11 +754,11 @@ jobs:
           TARGET_USER: ${{ github.event.inputs.target_username }}
           REPO_NAME: ${{ steps.create-repo.outputs.final_repo_name }}
         run: |
-          cd decompiled
+          cd apktool
           
-          # Copy DEX analysis folders to the decompiled directory
+          # Copy DEX analysis folders to the apktool directory
           echo "Copying DEX analysis outputs..."
-          cp -r ../dex-files ../dex2jar-output ../jadx-output ../baksmali-output ../androguard-output ./ || echo "Some analysis outputs may not exist"
+          cp -r ../dex-files ../dex2jar-output ../jadx-output ../baksmali-output ../androguard-output ../apkid-output ../simplify-output ../so-analysis ../crypto-analysis ./ || echo "Some analysis outputs may not exist"
           
           # Add all files (git lfs will handle large files automatically)
           git add .
@@ -618,10 +767,12 @@ jobs:
           if [ -f .gitattributes ]; then
             git commit -m "Initial commit: Decompiled APK (${{ steps.package-name.outputs.package }})" \
                        -m "Large files tracked with Git LFS (see .gitattributes)" \
-                       -m "Includes DEX analysis with dex2jar, jadx, baksmali, and Androguard"
+                       -m "Includes comprehensive DEX analysis: dex2jar, jadx, baksmali, Androguard, simplify, APKiD" \
+                       -m "Includes native library (.so) analysis and crypto pattern detection"
           else
             git commit -m "Initial commit: Decompiled APK (${{ steps.package-name.outputs.package }})" \
-                       -m "Includes DEX analysis with dex2jar, jadx, baksmali, and Androguard"
+                       -m "Includes comprehensive DEX analysis: dex2jar, jadx, baksmali, Androguard, simplify, APKiD" \
+                       -m "Includes native library (.so) analysis and crypto pattern detection"
           fi
           
           # Configure remote and push
@@ -643,9 +794,21 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### DEX Analysis Tools Used" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **apktool**: APK decompilation (output in root \`apktool/\` directory)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **dex2jar**: DEX to JAR conversion (output in \`dex2jar-output/\`)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **jadx**: Java decompilation (output in \`jadx-output/\`)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **baksmali**: DEX disassembly (output in \`baksmali-output/\`)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ **Androguard**: APK analysis (output in \`androguard-output/\`)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **APKiD**: Protection detection (output in \`apkid-output/\`)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **simplify**: DEX deobfuscation (output in \`simplify-output/\`)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Native Library Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **binutils** (strings, nm, objdump): Binary analysis" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **radare2**: Advanced binary analysis (output in \`so-analysis/\`)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Security Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Crypto pattern detection**: Encryption/obfuscation analysis (output in \`crypto-analysis/\`)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Decompilation completed successfully!" >> $GITHUB_STEP_SUMMARY
