@@ -11,7 +11,7 @@ on:
         description: 'GitHub username where the repository will be created'
         required: true
         type: string
-        default: 'Eduardob3677'
+        default: 'extremerom'
         # Note: Ensure only trusted users can trigger this workflow as it creates
         # repositories under the specified username using the TEST token
       quiet:
@@ -99,19 +99,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-
-      - name: Setup zram for additional memory
-        run: |
-          echo "Setting up zram for compressed swap..."
-          # Install zram-config if not available
-          sudo apt-get update -qq
-          # Configure zram to use 8GB of compressed RAM
-          sudo apt install linux-modules-extra-$(uname -r) zram-tools -y
-          sudo modprobe zram
-          sudo sed -i 's/^#PERCENT=50/PERCENT=90/' /etc/default/zramswap
-          sudo sed -i 's/^#PRIORITY=100/PRIORITY=1000/' /etc/default/zramswap
-          sudo systemctl restart zramswap
-          zramctl
           
       - name: Set up Java
         uses: actions/setup-java@v5
