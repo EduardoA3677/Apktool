@@ -128,7 +128,10 @@ jobs:
           mkdir -p apktool-bin
           
           # Download JAR file with retry logic and proper timeouts
-          curl -L --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o apktool-bin/apktool.jar "$JAR_URL"
+          if ! curl -L --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o apktool-bin/apktool.jar "$JAR_URL"; then
+            echo "Error: Failed to download apktool.jar"
+            exit 1
+          fi
           
           # Download or copy script with fallback
           if [ -n "$SCRIPT_URL" ]; then
