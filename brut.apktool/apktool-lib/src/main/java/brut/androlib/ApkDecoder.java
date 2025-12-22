@@ -188,7 +188,10 @@ public class ApkDecoder {
         OS.mkdir(smaliDir);
 
         LOGGER.info("Baksmaling " + fileName + "...");
-        SmaliDecoder decoder = new SmaliDecoder(mApkFile, fileName, mConfig.isBaksmaliDebugMode());
+        // When using multiple threads at ApkDecoder level, limit SmaliDecoder to 1 thread
+        // to avoid thread explosion (N outer threads * M inner threads)
+        int smaliJobs = (mWorker != null) ? 1 : 0;
+        SmaliDecoder decoder = new SmaliDecoder(mApkFile, fileName, mConfig.isBaksmaliDebugMode(), smaliJobs);
         decoder.decode(smaliDir);
 
         // Record minSdkVersion if there's no AndroidManifest.xml, i.e. JARs.

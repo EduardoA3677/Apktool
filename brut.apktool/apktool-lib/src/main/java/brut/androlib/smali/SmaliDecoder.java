@@ -35,12 +35,18 @@ public class SmaliDecoder {
     private final File mApkFile;
     private final String mDexName;
     private final boolean mBakDeb;
+    private final int mJobs;
     private int mInferredApiLevel;
 
     public SmaliDecoder(File apkFile, String dexName, boolean bakDeb) {
+        this(apkFile, dexName, bakDeb, 0);
+    }
+
+    public SmaliDecoder(File apkFile, String dexName, boolean bakDeb, int jobs) {
         mApkFile = apkFile;
         mDexName = dexName;
         mBakDeb = bakDeb;
+        mJobs = jobs;
     }
 
     public int getInferredApiLevel() {
@@ -108,10 +114,15 @@ public class SmaliDecoder {
         options.registerInfo = 0;
         options.inlineResolver = null;
 
-        // Set jobs automatically.
-        int jobs = Runtime.getRuntime().availableProcessors();
-        if (jobs > 6) {
-            jobs = 6;
+        // Set jobs automatically if not specified.
+        int jobs;
+        if (mJobs > 0) {
+            jobs = mJobs;
+        } else {
+            jobs = Runtime.getRuntime().availableProcessors();
+            if (jobs > 6) {
+                jobs = 6;
+            }
         }
 
         DexBackedDexFile dexFile = dexEntry.getDexFile();
