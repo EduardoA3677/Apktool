@@ -264,7 +264,7 @@ invoke-virtual {v0}, Lcom/example/Api;->verifyLicense()Z
 | `return vX` | Return value in register vX |
 | `return-void` | Return from void method |
 | `if-eqz vX, :label` | If vX equals zero, jump to label |
-| `if-nez vX, :label` | If vX not equals zero, jump to label |
+| `if-nez vX, :label` | If vX not equal to zero, jump to label |
 | `goto :label` | Unconditional jump to label |
 | `invoke-virtual` | Call virtual method |
 | `invoke-direct` | Call direct/private method |

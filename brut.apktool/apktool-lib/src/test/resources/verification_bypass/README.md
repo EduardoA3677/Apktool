@@ -175,12 +175,12 @@ invoke-virtual {v1}, Landroid/widget/Toast;->show()V
 - `const-string vX, "text"`: Load string constant into register vX
 - `return vX`: Return value in register vX
 - `return-void`: Return from void method
-- `invoke-virtual`: Call a virtual method
-- `invoke-direct`: Call a direct/private method
-- `if-eqz`: If equal to zero, branch
-- `move-result vX`: Move result into register vX
-- `iget-object`: Get instance field object
-- `iput-object`: Put instance field object
+- `invoke-virtual {args}, LClass;->method(params)ReturnType`: Call a virtual method
+- `invoke-direct {args}, LClass;->method(params)ReturnType`: Call a direct/private method
+- `if-eqz vX, :label`: If register vX equals zero, branch to label
+- `move-result vX`: Move method call result into register vX
+- `iget-object vX, vY, LClass;->field:LType;`: Get instance field object from vY into vX
+- `iput-object vX, vY, LClass;->field:LType;`: Put instance field object from vX into vY's field
 
 ### Boolean Values in Smali:
 - `false` = `0x0` = `0`

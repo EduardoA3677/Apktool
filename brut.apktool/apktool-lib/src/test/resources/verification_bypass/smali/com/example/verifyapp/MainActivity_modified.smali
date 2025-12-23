@@ -39,11 +39,6 @@
     const/4 v1, 0x1
 
     return v1
-    
-    # The following code is now unreachable but kept for reference
-    # :cond_0
-    # const/4 v1, 0x0
-    # return v1
 .end method
 
 .method protected onCreate(Landroid/os/Bundle;)V
