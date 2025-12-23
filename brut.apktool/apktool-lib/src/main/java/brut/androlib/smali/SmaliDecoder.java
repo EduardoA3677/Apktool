@@ -49,23 +49,30 @@ public class SmaliDecoder {
 
     public void decode(File outDir) throws AndrolibException {
         try {
-            // #3641 - Limit opcode API level to 29 or below (dex version up to 039) during disassembly
-            // to match the limit used during assembly in SmaliBuilder.
-            Opcodes limitedOpcodes = null;
+            // #3641 - Limit opcode API level to match SmaliBuilder to avoid verification errors.
+            // Load the container first to determine the original API level, then reload with
+            // limited opcodes to ensure consistent disassembly/assembly.
+            Opcodes limitedOpcodes;
             try {
                 // First load with default opcodes to determine the original API level
                 MultiDexContainer<? extends DexBackedDexFile> tempContainer =
                     DexFileFactory.loadDexContainer(mApkFile, null);
+                
+                // Check if we have any dex entries
+                if (tempContainer.getDexEntryNames().isEmpty()) {
+                    throw new AndrolibException("No dex entries found in: " + mApkFile.getName());
+                }
+                
                 String firstEntry = tempContainer.getDexEntryNames().get(0);
                 DexBackedDexFile tempDexFile = tempContainer.getEntry(firstEntry).getDexFile();
                 int originalApiLevel = tempDexFile.getOpcodes().api;
                 
-                // Limit to API 29 if needed
-                int limitedApiLevel = Math.min(originalApiLevel, 29);
+                // Limit to MAX_SUPPORTED_API_LEVEL if needed
+                int limitedApiLevel = Math.min(originalApiLevel, SmaliConstants.MAX_SUPPORTED_API_LEVEL);
                 limitedOpcodes = Opcodes.forApi(limitedApiLevel);
-            } catch (Exception e) {
-                // If we can't determine the API level, use default opcodes limited to API 29
-                limitedOpcodes = Opcodes.forApi(29);
+            } catch (IOException e) {
+                // If we can't determine the API level, use default opcodes limited to MAX_SUPPORTED_API_LEVEL
+                limitedOpcodes = Opcodes.forApi(SmaliConstants.MAX_SUPPORTED_API_LEVEL);
             }
             
             // Create the container with limited opcodes.
