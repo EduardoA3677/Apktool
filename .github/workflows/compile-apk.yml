@@ -7,6 +7,11 @@ on:
         description: 'GitHub repository URL with decompiled APK (e.g., https://github.com/username/repo)'
         required: true
         type: string
+      branch:
+        description: 'Branch of the remote repository (optional, defaults to repository default branch)'
+        required: false
+        type: string
+        default: ''
       quiet:
         description: 'Suppress normal output (-q/--quiet)'
         required: false
@@ -154,7 +159,16 @@ jobs:
       - name: Clone decompiled repository
         run: |
           echo "Cloning repository: ${{ github.event.inputs.repo_url }}"
-          git clone "${{ github.event.inputs.repo_url }}" decompiled
+          
+          # Clone with optional branch parameter
+          if [ -n "${{ github.event.inputs.branch }}" ]; then
+            echo "Using branch: ${{ github.event.inputs.branch }}"
+            git clone --branch "${{ github.event.inputs.branch }}" "${{ github.event.inputs.repo_url }}" decompiled
+          else
+            echo "Using default branch"
+            git clone "${{ github.event.inputs.repo_url }}" decompiled
+          fi
+          
           if [ ! -d decompiled ]; then
             echo "Error: Failed to clone repository"
             exit 1
@@ -434,6 +448,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Package**: ${{ steps.package-name.outputs.package }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Source Repository**: ${{ github.event.inputs.repo_url }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ github.event.inputs.branch }}" ]; then
+            echo "- **Branch**: ${{ github.event.inputs.branch }}" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "- **Signed APK**: ${{ steps.rename-apk.outputs.final_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ APK compiled and signed successfully!" >> $GITHUB_STEP_SUMMARY
