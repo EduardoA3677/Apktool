@@ -28,27 +28,39 @@ import com.android.tools.smali.dexlib2.dexbacked.DexBackedOdexFile;
 import com.android.tools.smali.dexlib2.iface.DexFile;
 import com.android.tools.smali.dexlib2.iface.MultiDexContainer;
 
+<<<<<<< HEAD
 import java.io.*;
 import java.util.ArrayList;
+=======
+import java.io.File;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
+>>>>>>> 51b81f8f (refactor: nested dex + replace --only-main-classes with -a/--all-src (#4069))
 
 public class SmaliDecoder {
     private final File mApkFile;
-    private final String mDexName;
-    private final boolean mBakDeb;
+    private final boolean mDebugMode;
+    private final Set<String> mDexFiles;
     private int mInferredApiLevel;
 
-    public SmaliDecoder(File apkFile, String dexName, boolean bakDeb) {
+    public SmaliDecoder(File apkFile, boolean debugMode) {
         mApkFile = apkFile;
-        mDexName = dexName;
-        mBakDeb = bakDeb;
+        mDebugMode = debugMode;
+        mDexFiles = new HashSet<>();
+    }
+
+    public Set<String> getDexFiles() {
+        return mDexFiles;
     }
 
     public int getInferredApiLevel() {
         return mInferredApiLevel;
     }
 
-    public void decode(File outDir) throws AndrolibException {
+    public void decode(String dexName, File smaliDir) throws AndrolibException {
         try {
+<<<<<<< HEAD
             // Create the container.
             MultiDexContainer<? extends DexBackedDexFile> container =
                 DexFileFactory.loadDexContainer(mApkFile, null);
@@ -70,6 +82,43 @@ public class SmaliDecoder {
             }
 
             assert !dexEntries.isEmpty();
+=======
+            BaksmaliOptions options = new BaksmaliOptions();
+            options.deodex = false;
+            options.implicitReferences = false;
+            options.parameterRegisters = true;
+            options.localsDirective = true;
+            options.sequentialLabels = true;
+            options.debugInfo = mDebugMode;
+            options.codeOffsets = false;
+            options.accessorComments = false;
+            options.registerInfo = 0;
+            options.inlineResolver = null;
+
+            // Set jobs automatically.
+            int jobs = Runtime.getRuntime().availableProcessors();
+            if (jobs > 6) {
+                jobs = 6;
+            }
+
+            // Create the container.
+            MultiDexContainer<? extends DexBackedDexFile> container =
+                DexFileFactory.loadDexContainer(mApkFile, null);
+
+            // If we have 1 item, ignore the passed file. Pull the DexFile we need.
+            MultiDexContainer.DexEntry<? extends DexBackedDexFile> dexEntry =
+                container.getDexEntryNames().size() == 1
+                    ? container.getEntry(container.getDexEntryNames().get(0))
+                    : container.getEntry(dexName);
+
+            // Double-check the passed param exists.
+            if (dexEntry == null) {
+                dexEntry = container.getEntry(container.getDexEntryNames().get(0));
+                assert dexEntry != null;
+            }
+
+            DexBackedDexFile dexFile = dexEntry.getDexFile();
+>>>>>>> 51b81f8f (refactor: nested dex + replace --only-main-classes with -a/--all-src (#4069))
 
             for (MultiDexContainer.DexEntry<? extends DexBackedDexFile> dexEntry : dexEntries) {
                 File smaliDir = outDir;
@@ -88,9 +137,24 @@ public class SmaliDecoder {
             if (apiLevel > 29) {
                 apiLevel = 29;
             }
+<<<<<<< HEAD
             mInferredApiLevel = apiLevel;
+=======
+
+            OS.mkdir(smaliDir);
+            Baksmali.disassembleDexFile(dexFile, smaliDir, jobs, options);
+
+            synchronized (mDexFiles) {
+                int apiLevel = dexFile.getOpcodes().api;
+                if (mInferredApiLevel == 0 || mInferredApiLevel > apiLevel) {
+                    mInferredApiLevel = apiLevel;
+                }
+
+                mDexFiles.add(dexName);
+            }
+>>>>>>> 51b81f8f (refactor: nested dex + replace --only-main-classes with -a/--all-src (#4069))
         } catch (IOException ex) {
-            throw new AndrolibException("Could not baksmali file: " + mDexName, ex);
+            throw new AndrolibException("Could not baksmali file: " + dexName, ex);
         }
     }
 
