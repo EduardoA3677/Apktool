@@ -246,6 +246,7 @@ public class Main {
         generalOptions.addOption(verboseOption);
 
         if (options == null || options == decodeOptions) {
+            decodeOptions.addOption(decodeAllSrcOption);
             decodeOptions.addOption(decodeForceOption);
             decodeOptions.addOption(decodeNoResOption);
             decodeOptions.addOption(decodeNoSrcOption);
@@ -255,7 +256,6 @@ public class Main {
             decodeOptions.addOption(jobsOption);
             decodeOptions.addOption(libOption);
             if (advanced) {
-                decodeOptions.addOption(decodeAllSrcOption);
                 decodeOptions.addOption(decodeKeepBrokenResOption);
                 decodeOptions.addOption(decodeMatchOriginalOption);
                 decodeOptions.addOption(decodeNoAssetsOption);
