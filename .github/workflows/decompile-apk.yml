@@ -233,14 +233,22 @@ jobs:
           echo "File downloaded successfully"
           ls -lh downloaded_file
           
-          # Extract filename from URL and normalize for extension detection
+          # Extract filename from URL for extension detection
           # Note: This is only used for format detection, not for actual URL access
-          URL_FILENAME=$(basename "${{ github.event.inputs.apk_url }}" | sed 's/[?#].*//' | tr '[:upper:]' '[:lower:]')
+          URL_PATH="${{ github.event.inputs.apk_url }}"
+          # Remove everything up to the last slash
+          URL_FILENAME="${URL_PATH##*/}"
+          # Remove query parameters and fragments
+          URL_FILENAME="${URL_FILENAME%%[?#]*}"
+          # Convert to lowercase for case-insensitive extension matching
+          URL_FILENAME_LOWER=$(echo "$URL_FILENAME" | tr '[:upper:]' '[:lower:]')
           
-          echo "Detected filename: $URL_FILENAME"
+          echo "Detected filename: $URL_FILENAME_LOWER"
           
           # Check if the file is APKM, APKS, or XAPK (these are typically zip files)
-          if [[ "$URL_FILENAME" == *.apkm ]] || [[ "$URL_FILENAME" == *.apks ]] || [[ "$URL_FILENAME" == *.xapk ]]; then
+          case "$URL_FILENAME_LOWER" in
+            *.apkm|*.apks|*.xapk)
+            *.apkm|*.apks|*.xapk)
             echo "Detected split APK format (APKM/APKS/XAPK) from URL extension, converting to APK..."
             
             # Use APKEditor to merge the split APK files into a single APK
@@ -256,11 +264,13 @@ jobs:
             
             # Clean up the original downloaded file
             rm -f downloaded_file
-          else
-            # If it's a regular APK, just rename it
+            ;;
+          *)
+            # If it's a regular APK or unknown format, just rename it
             echo "File appears to be a regular APK (or unknown format), treating as APK"
             mv downloaded_file app.apk
-          fi
+            ;;
+          esac
           
           # Verify final APK exists
           if [ ! -f app.apk ]; then
