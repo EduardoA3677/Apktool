@@ -179,14 +179,28 @@ jobs:
         run: |
           echo "Downloading APKEditor.jar from latest release..."
           
+          # Check if jq is available
+          if ! command -v jq &> /dev/null; then
+            echo "Error: jq is not installed"
+            exit 1
+          fi
+          
           # Get the latest release info from REAndroid/APKEditor
           LATEST_RELEASE=$(curl -s https://api.github.com/repos/REAndroid/APKEditor/releases/latest)
+          
+          # Check if curl succeeded and returned valid JSON
+          if [ -z "$LATEST_RELEASE" ] || ! echo "$LATEST_RELEASE" | jq empty 2>/dev/null; then
+            echo "Error: Failed to fetch or parse release information from GitHub API"
+            exit 1
+          fi
           
           # Extract download URL for APKEditor.jar
           JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | test("^APKEditor.*\\.jar$"; "i")) | .browser_download_url' | head -1)
           
-          if [ -z "$JAR_URL" ]; then
+          if [ -z "$JAR_URL" ] || [ "$JAR_URL" = "null" ]; then
             echo "Error: Could not find APKEditor.jar in latest release"
+            echo "Available assets:"
+            echo "$LATEST_RELEASE" | jq -r '.assets[].name' || echo "Failed to list assets"
             exit 1
           fi
           
@@ -219,14 +233,16 @@ jobs:
           echo "File downloaded successfully"
           ls -lh downloaded_file
           
-          # Detect file type and extension from URL
+          # Extract extension from URL (strip query parameters and fragments)
           URL_LOWER=$(echo "${{ github.event.inputs.apk_url }}" | tr '[:upper:]' '[:lower:]')
+          # Remove query parameters and fragments
+          URL_CLEAN=$(echo "$URL_LOWER" | sed 's/[?#].*//')
           
-          echo "URL: $URL_LOWER"
+          echo "URL: $URL_CLEAN"
           
           # Check if the file is APKM, APKS, or XAPK (these are typically zip files)
-          if [[ "$URL_LOWER" == *.apkm ]] || [[ "$URL_LOWER" == *.apks ]] || [[ "$URL_LOWER" == *.xapk ]]; then
-            echo "Detected split APK format (APKM/APKS/XAPK), converting to APK..."
+          if [[ "$URL_CLEAN" == *.apkm ]] || [[ "$URL_CLEAN" == *.apks ]] || [[ "$URL_CLEAN" == *.xapk ]]; then
+            echo "Detected split APK format (APKM/APKS/XAPK) from URL extension, converting to APK..."
             
             # Use APKEditor to merge the split APK files into a single APK
             java -jar APKEditor.jar m -i downloaded_file -o app.apk
@@ -243,7 +259,7 @@ jobs:
             rm -f downloaded_file
           else
             # If it's a regular APK, just rename it
-            echo "File appears to be a regular APK, no conversion needed"
+            echo "File appears to be a regular APK (or unknown format), treating as APK"
             mv downloaded_file app.apk
           fi
           
