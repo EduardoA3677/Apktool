@@ -194,8 +194,8 @@ jobs:
             exit 1
           fi
           
-          # Extract download URL for APKEditor.jar
-          JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | test("^APKEditor.*\\.jar$")) | .browser_download_url' | head -1)
+          # Extract download URL for APKEditor.jar (matches APKEditor-X.Y.Z.jar or APKEditor.jar)
+          JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | test("^APKEditor(-[0-9]+\\.[0-9]+\\.[0-9]+)?\\.jar$")) | .browser_download_url' | head -1)
           
           if [ -z "$JAR_URL" ] || [ "$JAR_URL" = "null" ]; then
             echo "Error: Could not find APKEditor.jar in latest release"
@@ -233,13 +233,14 @@ jobs:
           echo "File downloaded successfully"
           ls -lh downloaded_file
           
-          # Extract extension from URL (strip query parameters and fragments, convert to lowercase)
-          URL_CLEAN=$(echo "${{ github.event.inputs.apk_url }}" | tr '[:upper:]' '[:lower:]' | sed 's/[?#].*//')
+          # Extract filename from URL and normalize for extension detection
+          # Note: This is only used for format detection, not for actual URL access
+          URL_FILENAME=$(basename "${{ github.event.inputs.apk_url }}" | sed 's/[?#].*//' | tr '[:upper:]' '[:lower:]')
           
-          echo "URL: $URL_CLEAN"
+          echo "Detected filename: $URL_FILENAME"
           
           # Check if the file is APKM, APKS, or XAPK (these are typically zip files)
-          if [[ "$URL_CLEAN" == *.apkm ]] || [[ "$URL_CLEAN" == *.apks ]] || [[ "$URL_CLEAN" == *.xapk ]]; then
+          if [[ "$URL_FILENAME" == *.apkm ]] || [[ "$URL_FILENAME" == *.apks ]] || [[ "$URL_FILENAME" == *.xapk ]]; then
             echo "Detected split APK format (APKM/APKS/XAPK) from URL extension, converting to APK..."
             
             # Use APKEditor to merge the split APK files into a single APK
