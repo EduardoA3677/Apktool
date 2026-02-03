@@ -249,30 +249,30 @@ jobs:
           case "$URL_FILENAME_LOWER" in
             *.apkm|*.apks|*.xapk)
               echo "Detected split APK format (APKM/APKS/XAPK) from URL extension, converting to APK..."
-            
-            # Use APKEditor to merge the split APK files into a single APK
-            echo "Running: java -jar APKEditor.jar m -i downloaded_file -o app.apk"
-            if ! java -jar APKEditor.jar m -i downloaded_file -o app.apk 2>&1; then
-              echo "Error: APKEditor failed to convert split APK to APK"
-              exit 1
-            fi
-            
-            if [ ! -f app.apk ]; then
-              echo "Error: Failed to convert split APK to APK - output file not created"
-              exit 1
-            fi
-            
-            echo "Conversion completed successfully"
-            ls -lh app.apk
-            
-            # Clean up the original downloaded file
-            rm -f downloaded_file
-            ;;
-          *)
-            # If it's a regular APK or unknown format, just rename it
-            echo "File appears to be a regular APK (or unknown format), treating as APK"
-            mv downloaded_file app.apk
-            ;;
+              
+              # Use APKEditor to merge the split APK files into a single APK
+              echo "Running: java -jar APKEditor.jar m -i downloaded_file -o app.apk"
+              if ! java -jar APKEditor.jar m -i downloaded_file -o app.apk; then
+                echo "Error: APKEditor failed to convert split APK to APK"
+                exit 1
+              fi
+              
+              if [ ! -f app.apk ]; then
+                echo "Error: Failed to convert split APK to APK - output file not created"
+                exit 1
+              fi
+              
+              echo "Conversion completed successfully"
+              ls -lh app.apk
+              
+              # Clean up the original downloaded file
+              rm -f downloaded_file
+              ;;
+            *)
+              # If it's a regular APK or unknown format, just rename it
+              echo "File appears to be a regular APK (or unknown format), treating as APK"
+              mv downloaded_file app.apk
+              ;;
           esac
           
           # Verify final APK exists
