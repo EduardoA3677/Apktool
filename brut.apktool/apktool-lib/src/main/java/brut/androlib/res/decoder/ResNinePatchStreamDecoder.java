@@ -92,22 +92,18 @@ public class ResNinePatchStreamDecoder implements ResStreamDecoder {
             // https://developer.android.com/about/versions/android-4.3.html#OpticalBounds
             try {
                 LayoutBounds lb = findLayoutBounds(data);
-
                 for (int i = 0; i < lb.left; i++) {
                     int x = 1 + i;
                     dst.setRGB(x, h + 1, LayoutBounds.COLOR_TICK);
                 }
-
                 for (int i = 0; i < lb.right; i++) {
                     int x = w - i;
                     dst.setRGB(x, h + 1, LayoutBounds.COLOR_TICK);
                 }
-
                 for (int i = 0; i < lb.top; i++) {
                     int y = 1 + i;
                     dst.setRGB(w + 1, y, LayoutBounds.COLOR_TICK);
                 }
-
                 for (int i = 0; i < lb.bottom; i++) {
                     int y = h - i;
                     dst.setRGB(w + 1, y, LayoutBounds.COLOR_TICK);
