@@ -179,10 +179,10 @@ jobs:
         run: |
           echo "Downloading APKEditor.jar from latest release..."
           
-          # Check if jq is available
+          # Check if jq is available, install if not
           if ! command -v jq &> /dev/null; then
-            echo "Error: jq is not installed"
-            exit 1
+            echo "jq is not installed, installing..."
+            sudo apt-get update -qq && sudo apt-get install -y jq
           fi
           
           # Get the latest release info from REAndroid/APKEditor
@@ -248,13 +248,17 @@ jobs:
           # Check if the file is APKM, APKS, or XAPK (these are typically zip files)
           case "$URL_FILENAME_LOWER" in
             *.apkm|*.apks|*.xapk)
-            echo "Detected split APK format (APKM/APKS/XAPK) from URL extension, converting to APK..."
+              echo "Detected split APK format (APKM/APKS/XAPK) from URL extension, converting to APK..."
             
             # Use APKEditor to merge the split APK files into a single APK
-            java -jar APKEditor.jar m -i downloaded_file -o app.apk
+            echo "Running: java -jar APKEditor.jar m -i downloaded_file -o app.apk"
+            if ! java -jar APKEditor.jar m -i downloaded_file -o app.apk 2>&1; then
+              echo "Error: APKEditor failed to convert split APK to APK"
+              exit 1
+            fi
             
             if [ ! -f app.apk ]; then
-              echo "Error: Failed to convert split APK to APK"
+              echo "Error: Failed to convert split APK to APK - output file not created"
               exit 1
             fi
             
