@@ -175,15 +175,87 @@ jobs:
           apktool if framework-dm2q.apk -t dm2q -p apktool-frameworks
           echo "Framework installed successfully with tag dm2q"
 
-      - name: Download APK
+      - name: Download APKEditor
         run: |
-          echo "Downloading APK from ${{ github.event.inputs.apk_url }}"
-          curl -L -o app.apk "${{ github.event.inputs.apk_url }}"
-          if [ ! -f app.apk ]; then
-            echo "Error: Failed to download APK"
+          echo "Downloading APKEditor.jar from latest release..."
+          
+          # Get the latest release info from REAndroid/APKEditor
+          LATEST_RELEASE=$(curl -s https://api.github.com/repos/REAndroid/APKEditor/releases/latest)
+          
+          # Extract download URL for APKEditor.jar
+          JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -1)
+          
+          if [ -z "$JAR_URL" ]; then
+            echo "Error: Could not find APKEditor.jar in latest release"
             exit 1
           fi
-          echo "APK downloaded successfully"
+          
+          echo "Downloading APKEditor.jar from: $JAR_URL"
+          
+          # Download APKEditor
+          curl -L -o APKEditor.jar "$JAR_URL"
+          
+          # Verify download
+          if [ ! -f APKEditor.jar ]; then
+            echo "Error: Failed to download APKEditor.jar"
+            exit 1
+          fi
+          
+          ls -lh APKEditor.jar
+          echo "APKEditor downloaded successfully"
+
+      - name: Download and convert APK
+        run: |
+          echo "Downloading file from ${{ github.event.inputs.apk_url }}"
+          
+          # Download the file with a temporary name
+          curl -L -o downloaded_file "${{ github.event.inputs.apk_url }}"
+          
+          if [ ! -f downloaded_file ]; then
+            echo "Error: Failed to download file"
+            exit 1
+          fi
+          
+          echo "File downloaded successfully"
+          ls -lh downloaded_file
+          
+          # Detect file type using file command and extension from URL
+          FILE_TYPE=$(file -b --mime-type downloaded_file)
+          URL_LOWER=$(echo "${{ github.event.inputs.apk_url }}" | tr '[:upper:]' '[:lower:]')
+          
+          echo "Detected MIME type: $FILE_TYPE"
+          echo "URL: $URL_LOWER"
+          
+          # Check if the file is APKM, APKS, or XAPK (these are typically zip files)
+          if [[ "$URL_LOWER" == *.apkm ]] || [[ "$URL_LOWER" == *.apks ]] || [[ "$URL_LOWER" == *.xapk ]]; then
+            echo "Detected split APK format (APKM/APKS/XAPK), converting to APK..."
+            
+            # Use APKEditor to merge the split APK files into a single APK
+            java -jar APKEditor.jar m -i downloaded_file -o app.apk
+            
+            if [ ! -f app.apk ]; then
+              echo "Error: Failed to convert split APK to APK"
+              exit 1
+            fi
+            
+            echo "Conversion completed successfully"
+            ls -lh app.apk
+            
+            # Clean up the original downloaded file
+            rm -f downloaded_file
+          else
+            # If it's a regular APK, just rename it
+            echo "File appears to be a regular APK, no conversion needed"
+            mv downloaded_file app.apk
+          fi
+          
+          # Verify final APK exists
+          if [ ! -f app.apk ]; then
+            echo "Error: app.apk not found after processing"
+            exit 1
+          fi
+          
+          echo "Final APK ready for decompilation"
           ls -lh app.apk
 
       - name: Decompile APK
