@@ -248,7 +248,6 @@ jobs:
           # Check if the file is APKM, APKS, or XAPK (these are typically zip files)
           case "$URL_FILENAME_LOWER" in
             *.apkm|*.apks|*.xapk)
-            *.apkm|*.apks|*.xapk)
             echo "Detected split APK format (APKM/APKS/XAPK) from URL extension, converting to APK..."
             
             # Use APKEditor to merge the split APK files into a single APK
