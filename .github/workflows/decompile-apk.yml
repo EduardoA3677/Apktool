@@ -183,7 +183,7 @@ jobs:
           LATEST_RELEASE=$(curl -s https://api.github.com/repos/REAndroid/APKEditor/releases/latest)
           
           # Extract download URL for APKEditor.jar
-          JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -1)
+          JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | test("^APKEditor.*\\.jar$"; "i")) | .browser_download_url' | head -1)
           
           if [ -z "$JAR_URL" ]; then
             echo "Error: Could not find APKEditor.jar in latest release"
@@ -219,11 +219,9 @@ jobs:
           echo "File downloaded successfully"
           ls -lh downloaded_file
           
-          # Detect file type using file command and extension from URL
-          FILE_TYPE=$(file -b --mime-type downloaded_file)
+          # Detect file type and extension from URL
           URL_LOWER=$(echo "${{ github.event.inputs.apk_url }}" | tr '[:upper:]' '[:lower:]')
           
-          echo "Detected MIME type: $FILE_TYPE"
           echo "URL: $URL_LOWER"
           
           # Check if the file is APKM, APKS, or XAPK (these are typically zip files)
