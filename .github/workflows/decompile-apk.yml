@@ -195,7 +195,7 @@ jobs:
           fi
           
           # Extract download URL for APKEditor.jar
-          JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | test("^APKEditor.*\\.jar$"; "i")) | .browser_download_url' | head -1)
+          JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | test("^APKEditor.*\\.jar$")) | .browser_download_url' | head -1)
           
           if [ -z "$JAR_URL" ] || [ "$JAR_URL" = "null" ]; then
             echo "Error: Could not find APKEditor.jar in latest release"
@@ -233,10 +233,8 @@ jobs:
           echo "File downloaded successfully"
           ls -lh downloaded_file
           
-          # Extract extension from URL (strip query parameters and fragments)
-          URL_LOWER=$(echo "${{ github.event.inputs.apk_url }}" | tr '[:upper:]' '[:lower:]')
-          # Remove query parameters and fragments
-          URL_CLEAN=$(echo "$URL_LOWER" | sed 's/[?#].*//')
+          # Extract extension from URL (strip query parameters and fragments, convert to lowercase)
+          URL_CLEAN=$(echo "${{ github.event.inputs.apk_url }}" | tr '[:upper:]' '[:lower:]' | sed 's/[?#].*//')
           
           echo "URL: $URL_CLEAN"
           
