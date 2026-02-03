@@ -255,8 +255,6 @@ jobs:
             *.apkm|*.apks|*.xapk)
               # Verify the file is actually a zip file
               if [[ "$FILE_TYPE" == "application/zip" ]] || [[ "$FILE_TYPE" == "application/java-archive" ]]; then
-              # Verify the file is actually a zip file
-              if [[ "$FILE_TYPE" == "application/zip" ]] || [[ "$FILE_TYPE" == "application/java-archive" ]]; then
                 echo "Detected split APK format (APKM/APKS/XAPK) from URL extension, converting to APK..."
                 
                 # Use APKEditor to merge the split APK files into a single APK
