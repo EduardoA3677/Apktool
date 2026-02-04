@@ -111,12 +111,6 @@ jobs:
         # Build as SNAPSHOT (without 'release' task)
         run: ./gradlew build shadowJar proguard
 
-      - name: Upload
-        uses: actions/upload-artifact@v6
-        with:
-          name: apktool.jar
-          path: brut.apktool/apktool-cli/build/libs/apktool-v*
-
       - name: Get version
         id: get_version
         shell: bash
@@ -156,7 +150,7 @@ jobs:
         id: find_jar
         shell: bash
         run: |
-          JAR_FILE=$(find brut.apktool/apktool-cli/build/libs -name "apktool-*.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" -not -name "*-all.jar" | head -1)
+          JAR_FILE=$(find brut.apktool/apktool-cli/build/libs -name "apktool-*.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" -not -name "*-all.jar" -not -name "*-cli.jar" | head -1)
           if [ -z "$JAR_FILE" ]; then
             echo "Error: Could not find apktool JAR file"
             exit 1
@@ -164,9 +158,14 @@ jobs:
           echo "jar_path=$JAR_FILE" >> "$GITHUB_OUTPUT"
           echo "JAR file: $JAR_FILE"
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: apktool.jar
+          path: ${{ steps.find_jar.outputs.jar_path }}
+
       - name: Create Release and Upload Assets
-        # Only create releases for non-SNAPSHOT builds
-        if: steps.get_version.outputs.is_snapshot == 'false'
+        # Create releases for all builds (SNAPSHOT marked as prerelease)
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.TEST }}
@@ -174,7 +173,7 @@ jobs:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: Release v${{ steps.get_version.outputs.version }}
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.get_version.outputs.is_snapshot == 'true' }}
           files: |
             ${{ steps.find_jar.outputs.jar_path }}
             scripts/linux/apktool
