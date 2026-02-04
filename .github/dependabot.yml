@@ -43,6 +43,9 @@ updates:
     # Additional registries for dependency resolution
     registries:
       - google-maven
+    # Allow all dependency types including Gradle wrapper
+    allow:
+      - dependency-type: "all"
     # Group related dependencies together for efficient updates
     groups:
       # Apache Commons libraries
@@ -70,4 +73,10 @@ updates:
       dev-dependencies:
         patterns:
           - "junit:junit"
+      # Gradle plugins and build tools
+      gradle-plugins:
+        patterns:
           - "com.vanniktech.maven.publish:*"
+        update-types:
+          - "minor"
+          - "patch"
