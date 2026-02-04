@@ -103,15 +103,6 @@ jobs:
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
-          
-          # Determine if this is a release or snapshot
-          if [[ "$VERSION" == *SNAPSHOT* ]]; then
-            echo "is_snapshot=true" >> "$GITHUB_OUTPUT"
-            echo "This is a SNAPSHOT build"
-          else
-            echo "is_snapshot=false" >> "$GITHUB_OUTPUT"
-            echo "This is a RELEASE build"
-          fi
 
       - name: Find JAR file path
         id: find_jar
@@ -134,15 +125,15 @@ jobs:
           path: ${{ steps.find_jar.outputs.jar_path }}
 
       - name: Create Release and Upload Assets
-        # Create releases for all builds (SNAPSHOT marked as prerelease)
+        # Create all releases as normal releases (not pre-release)
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.TEST }}
         with:
-          tag_name: v${{ steps.get_version.outputs.version }}
-          name: Release v${{ steps.get_version.outputs.version }}
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: Release ${{ steps.get_version.outputs.version }}
           draft: false
-          prerelease: ${{ steps.get_version.outputs.is_snapshot == 'true' }}
+          prerelease: false
           files: |
             ${{ steps.find_jar.outputs.jar_path }}
             scripts/linux/apktool
