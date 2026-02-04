@@ -11,7 +11,7 @@ r8 = "8.13.19"
 smali = "3.0.9"
 xmlpull = "1.1.3.1"
 xmlunit = "2.11.0"
-maven-publish = "0.33.0"
+maven-publish = "0.36.0"
 
 [libraries]
 baksmali = { module = "com.android.tools.smali:smali-baksmali", version.ref = "baksmali" }
