@@ -63,7 +63,7 @@ jobs:
           # Install zram-config if not available
           sudo apt-get update -qq
           # Configure zram to use 8GB of compressed RAM
-          sudo apt install linux-modules-extra-$(uname -r) zram-tools -y
+          sudo apt install "linux-modules-extra-$(uname -r)" zram-tools -y
           sudo modprobe zram
           sudo sed -i 's/^#PERCENT=50/PERCENT=90/' /etc/default/zramswap
           sudo sed -i 's/^#PRIORITY=100/PRIORITY=1000/' /etc/default/zramswap
@@ -108,7 +108,7 @@ jobs:
           chmod +x apktool-bin/apktool
 
           # Add to PATH
-          echo "$GITHUB_WORKSPACE/apktool-bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/apktool-bin" >> "$GITHUB_PATH"
 
           # Verify setup
           ls -la apktool-bin/
@@ -361,8 +361,8 @@ jobs:
             fi
             # Replace dots with underscores
             REPO_NAME=$(echo "$PACKAGE" | tr '.' '_')
-            echo "package=$PACKAGE" >> $GITHUB_OUTPUT
-            echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+            echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
+            echo "repo_name=$REPO_NAME" >> "$GITHUB_OUTPUT"
             echo "Package: $PACKAGE"
             echo "Repository name: $REPO_NAME"
           else
@@ -390,7 +390,7 @@ jobs:
           echo "Creating repository: $TARGET_USER/$REPO_NAME"
           gh repo create "$TARGET_USER/$REPO_NAME" --public --description "Decompiled APK: ${{ steps.package-name.outputs.package }}"
 
-          echo "final_repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "final_repo_name=$REPO_NAME" >> "$GITHUB_OUTPUT"
           echo "Repository created: $TARGET_USER/$REPO_NAME"
 
       - name: Configure Git
@@ -474,9 +474,11 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## Decompilation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Package**: ${{ steps.package-name.outputs.package }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Repository**: [${{ github.event.inputs.target_username }}/${{ steps.create-repo.outputs.final_repo_name }}](https://github.com/${{ github.event.inputs.target_username }}/${{ steps.create-repo.outputs.final_repo_name }})" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Decompilation completed successfully!" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Decompilation Summary"
+            echo ""
+            echo "- **Package**: ${{ steps.package-name.outputs.package }}"
+            echo "- **Repository**: [${{ github.event.inputs.target_username }}/${{ steps.create-repo.outputs.final_repo_name }}](https://github.com/${{ github.event.inputs.target_username }}/${{ steps.create-repo.outputs.final_repo_name }})"
+            echo ""
+            echo "✅ Decompilation completed successfully!"
+          } >> "$GITHUB_STEP_SUMMARY"

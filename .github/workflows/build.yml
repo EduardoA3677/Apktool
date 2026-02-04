@@ -136,7 +136,7 @@ jobs:
             exit 1
           fi
 
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
 
       - name: Find JAR file path
@@ -147,7 +147,7 @@ jobs:
             echo "Error: Could not find apktool JAR file"
             exit 1
           fi
-          echo "jar_path=$JAR_FILE" >> $GITHUB_OUTPUT
+          echo "jar_path=$JAR_FILE" >> "$GITHUB_OUTPUT"
           echo "JAR file: $JAR_FILE"
 
       - name: Create Release and Upload Assets

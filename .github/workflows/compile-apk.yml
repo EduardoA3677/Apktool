@@ -96,7 +96,7 @@ jobs:
           chmod +x apktool-bin/apktool
 
           # Add to PATH
-          echo "$GITHUB_WORKSPACE/apktool-bin" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/apktool-bin" >> "$GITHUB_PATH"
 
           # Verify setup
           ls -la apktool-bin/
@@ -151,7 +151,7 @@ jobs:
               echo "Error: Could not extract package name"
               exit 1
             fi
-            echo "package=$PACKAGE" >> $GITHUB_OUTPUT
+            echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
             echo "Package: $PACKAGE"
           else
             echo "Error: AndroidManifest.xml not found"
@@ -280,7 +280,7 @@ jobs:
           android-sdk/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0"
 
           # Add to PATH
-          echo "$(pwd)/android-sdk/build-tools/34.0.0" >> $GITHUB_PATH
+          echo "$(pwd)/android-sdk/build-tools/34.0.0" >> "$GITHUB_PATH"
 
       - name: Align APK
         run: |
@@ -342,7 +342,7 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           FINAL_NAME="${PACKAGE}_${TIMESTAMP}_signed.apk"
           mv signed.apk "$FINAL_NAME"
-          echo "final_name=$FINAL_NAME" >> $GITHUB_OUTPUT
+          echo "final_name=$FINAL_NAME" >> "$GITHUB_OUTPUT"
           echo "Final APK name: $FINAL_NAME"
 
       - name: Upload signed APK to artifacts
@@ -354,15 +354,17 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## Compilation and Signing Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Package**: ${{ steps.package-name.outputs.package }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Source Repository**: ${{ github.event.inputs.repo_url }}" >> $GITHUB_STEP_SUMMARY
-          if [ -n "${{ github.event.inputs.branch }}" ]; then
-            echo "- **Branch**: ${{ github.event.inputs.branch }}" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "- **Signed APK**: ${{ steps.rename-apk.outputs.final_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ APK compiled and signed successfully!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📦 Download the signed APK from the artifacts section above." >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Compilation and Signing Summary"
+            echo ""
+            echo "- **Package**: ${{ steps.package-name.outputs.package }}"
+            echo "- **Source Repository**: ${{ github.event.inputs.repo_url }}"
+            if [ -n "${{ github.event.inputs.branch }}" ]; then
+              echo "- **Branch**: ${{ github.event.inputs.branch }}"
+            fi
+            echo "- **Signed APK**: ${{ steps.rename-apk.outputs.final_name }}"
+            echo ""
+            echo "✅ APK compiled and signed successfully!"
+            echo ""
+            echo "📦 Download the signed APK from the artifacts section above."
+          } >> "$GITHUB_STEP_SUMMARY"
