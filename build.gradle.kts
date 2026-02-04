@@ -1,4 +1,5 @@
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.TimeUnit
 
 val version = "3.0.0"
 val suffix = "SNAPSHOT"
@@ -18,8 +19,8 @@ fun executeGit(vararg args: String): String? {
             .start()
         
         val output = process.inputStream.bufferedReader().use { it.readText().trim() }
-        val exitCode = process.waitFor()
-        if (exitCode == 0) output else null
+        val completed = process.waitFor(10, TimeUnit.SECONDS)
+        if (completed && process.exitValue() == 0) output else null
     } catch (e: Exception) {
         null
     }
