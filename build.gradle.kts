@@ -11,27 +11,26 @@ defaultTasks("build", "shadowJar", "proguard")
 
 // Functions
 val gitDescribe: String? by lazy {
-    val stdout = ByteArrayOutputStream()
     try {
-        rootProject.exec {
-            // Exclude tags containing SNAPSHOT to avoid recursive version strings
-            commandLine("git", "describe", "--tags", "--match", "v*", "--exclude", "*SNAPSHOT*")
-            standardOutput = stdout
-        }
-        stdout.toString().trim().replace("-g", "-")
+        val process = ProcessBuilder("git", "describe", "--tags", "--match", "v*", "--exclude", "*SNAPSHOT*")
+            .directory(rootProject.projectDir)
+            .start()
+        val output = process.inputStream.bufferedReader().readText().trim()
+        process.waitFor()
+        if (process.exitValue() == 0) output.replace("-g", "-") else null
     } catch (e: Exception) {
         null
     }
 }
 
 val gitBranch: String? by lazy {
-    val stdout = ByteArrayOutputStream()
     try {
-        rootProject.exec {
-            commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
-            standardOutput = stdout
-        }
-        stdout.toString().trim()
+        val process = ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
+            .directory(rootProject.projectDir)
+            .start()
+        val output = process.inputStream.bufferedReader().readText().trim()
+        process.waitFor()
+        if (process.exitValue() == 0) output else null
     } catch (e: Exception) {
         null
     }
@@ -88,7 +87,7 @@ subprojects {
     }
 }
 
-task("release") {
+tasks.register("release") {
     // Used for official releases.
 }
 
