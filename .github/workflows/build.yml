@@ -79,8 +79,8 @@ jobs:
           dependency-graph: generate-and-submit
 
       - name: Build (Linux)
-        # Build as SNAPSHOT (without 'release' task), skip tests
-        run: ./gradlew build shadowJar proguard -x test
+        # Build as SNAPSHOT (without 'release' task)
+        run: ./gradlew build shadowJar proguard
 
       - name: Get version
         id: get_version
