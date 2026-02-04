@@ -15,9 +15,12 @@ val gitDescribe: String? by lazy {
         val process = ProcessBuilder("git", "describe", "--tags", "--match", "v*", "--exclude", "*SNAPSHOT*")
             .directory(rootProject.projectDir)
             .start()
-        val output = process.inputStream.bufferedReader().readText().trim()
         process.waitFor()
-        if (process.exitValue() == 0) output.replace("-g", "-") else null
+        if (process.exitValue() == 0) {
+            process.inputStream.bufferedReader().use { it.readText().trim() }.replace("-g", "-")
+        } else {
+            null
+        }
     } catch (e: Exception) {
         null
     }
@@ -28,9 +31,12 @@ val gitBranch: String? by lazy {
         val process = ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
             .directory(rootProject.projectDir)
             .start()
-        val output = process.inputStream.bufferedReader().readText().trim()
         process.waitFor()
-        if (process.exitValue() == 0) output else null
+        if (process.exitValue() == 0) {
+            process.inputStream.bufferedReader().use { it.readText().trim() }
+        } else {
+            null
+        }
     } catch (e: Exception) {
         null
     }
