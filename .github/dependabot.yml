@@ -15,7 +15,6 @@ updates:
       day: monday
       time: "04:00"
       timezone: "America/New_York"
-    open-pull-requests-limit: 10
     labels:
       - "dependencies"
       - "github-actions"
@@ -32,7 +31,6 @@ updates:
       day: monday
       time: "04:00"
       timezone: "America/New_York"
-    open-pull-requests-limit: 10
     labels:
       - "dependencies"
       - "gradle"
