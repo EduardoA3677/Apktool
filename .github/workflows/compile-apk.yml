@@ -43,7 +43,7 @@ on:
         type: boolean
         default: false
       advanced_options:
-        description: 'Additional apktool build flags (e.g., --no-apk --shorten-res-paths --enable-sparse-encoding --collapse-res-names --no-crunch --copy-original --net-sec-conf --aapt <path>)'
+        description: 'Additional apktool build flags: --no-apk (no APK repacking), --shorten-res-paths (shorten paths), --enable-sparse-encoding (sparse encoding), --collapse-res-names (collapse names), --no-crunch (no crunching), --copy-original (copy META-INF), --net-sec-conf (network security), --aapt <path> (custom aapt2)'
         required: false
         type: string
         default: ''
@@ -233,8 +233,20 @@ jobs:
           # Add advanced options if provided
           if [ -n "${{ github.event.inputs.advanced_options }}" ]; then
             echo "Adding advanced options: ${{ github.event.inputs.advanced_options }}"
-            # Split advanced_options by spaces and add to CMD
+            # Validate that advanced_options only contains allowed apktool flags
+            # This prevents injection of arbitrary commands
+            allowed_flags="--no-apk --shorten-res-paths --enable-sparse-encoding --collapse-res-names --no-crunch --copy-original --net-sec-conf --aapt"
             read -ra ADV_OPTS <<< "${{ github.event.inputs.advanced_options }}"
+            for opt in "${ADV_OPTS[@]}"; do
+              # Check if it's a flag (starts with -) or a path (for --aapt)
+              if [[ "$opt" =~ ^-- ]]; then
+                # Extract base flag without value
+                base_flag=$(echo "$opt" | cut -d' ' -f1)
+                if ! echo "$allowed_flags" | grep -q -w "$base_flag"; then
+                  echo "Warning: Unknown flag '$opt' - please verify it's a valid apktool build flag"
+                fi
+              fi
+            done
             CMD+=("${ADV_OPTS[@]}")
           fi
 

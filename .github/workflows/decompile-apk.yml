@@ -42,7 +42,7 @@ on:
         type: boolean
         default: false
       advanced_options:
-        description: 'Additional apktool decode flags (e.g., -r -s --only-main-classes --only-manifest --res-resolve-mode <mode> --keep-broken-res --match-original --no-assets)'
+        description: 'Additional apktool decode flags: -r (skip resources), -s (skip sources), --only-main-classes (main dex only), --only-manifest (manifest only), --res-resolve-mode <mode> (default/greedy/lazy), --keep-broken-res (keep broken), --match-original (match original), --no-assets (skip assets)'
         required: false
         type: string
         default: ''
@@ -332,8 +332,20 @@ jobs:
           # Add advanced options if provided
           if [ -n "${{ github.event.inputs.advanced_options }}" ]; then
             echo "Adding advanced options: ${{ github.event.inputs.advanced_options }}"
-            # Split advanced_options by spaces and add to CMD
+            # Validate that advanced_options only contains allowed apktool flags
+            # This prevents injection of arbitrary commands
+            allowed_flags="-r -s --only-main-classes --only-manifest --res-resolve-mode --keep-broken-res --match-original --no-assets"
             read -ra ADV_OPTS <<< "${{ github.event.inputs.advanced_options }}"
+            for opt in "${ADV_OPTS[@]}"; do
+              # Check if it's a flag (starts with -)
+              if [[ "$opt" =~ ^- ]]; then
+                # Extract base flag without value
+                base_flag=$(echo "$opt" | cut -d' ' -f1)
+                if ! echo "$allowed_flags" | grep -q -w -e "$base_flag"; then
+                  echo "Warning: Unknown flag '$opt' - please verify it's a valid apktool decode flag"
+                fi
+              fi
+            done
             CMD+=("${ADV_OPTS[@]}")
           fi
 
