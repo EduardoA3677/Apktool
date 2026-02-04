@@ -21,40 +21,41 @@ import brut.androlib.res.table.ResId;
 import brut.androlib.res.table.ResTable;
 import brut.androlib.res.table.value.ResArray;
 import brut.androlib.res.table.value.ResValue;
-import brut.common.BrutException;
 import brut.directory.ExtFile;
 
 import org.junit.*;
 import static org.junit.Assert.*;
 
 public class DecodeArrayTest extends BaseTest {
+    private static ExtFile sTestApk;
     private static ResTable sTable;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        TestUtils.copyResourceDir(MissingVersionManifestTest.class, "issue1994", sTmpDir);
+        copyResourceDir(MissingVersionManifestTest.class, "issue1994", sTmpDir);
 
-        LOGGER.info("Decoding issue1994.apk...");
-        ExtFile testApk = new ExtFile(sTmpDir, "issue1994.apk");
-        ApkInfo testInfo = new ApkInfo(testApk);
+        log("Decoding issue1994.apk...");
+        sTestApk = new ExtFile(sTmpDir, "issue1994.apk");
+        ApkInfo testInfo = new ApkInfo();
+        testInfo.setApkFile(sTestApk);
         sTable = new ResTable(testInfo, sConfig);
-        sTable.loadMainPackage();
+        sTable.load();
     }
 
     @AfterClass
     public static void afterClass() throws Exception {
-        sTable.getApkInfo().getApkFile().close();
+        sTestApk.close();
     }
 
     @Test
-    public void decodeStringArray() throws BrutException {
-        ResValue value = sTable.getDefaultEntry(ResId.of(0x7F020001)).getValue();
+    public void decodeStringArray() throws Exception {
+        ResValue value = sTable.resolveEntry(ResId.of(0x7F020001)).getValue();
         assertTrue("Not a ResArray. Found: " + value.getClass(), value instanceof ResArray);
     }
 
     @Test
-    public void decodeArray() throws BrutException {
-        ResValue value = sTable.getDefaultEntry(ResId.of(0x7F020000)).getValue();
+    public void decodeArray() throws Exception {
+        ResValue value = sTable.resolveEntry(ResId.of(0x7F020000)).getValue();
         assertTrue("Not a ResArray. Found: " + value.getClass(), value instanceof ResArray);
     }
 }

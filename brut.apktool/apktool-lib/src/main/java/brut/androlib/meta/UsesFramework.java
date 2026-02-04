@@ -36,22 +36,21 @@ public class UsesFramework implements YamlSerializable {
     }
 
     public boolean isEmpty() {
-        return mIds.isEmpty() && mTag == null;
+        return mIds.isEmpty()
+            && mTag == null;
     }
 
     @Override
     public void readItem(YamlReader reader) {
         YamlLine line = reader.getLine();
         switch (line.getKey()) {
-            case "ids": {
+            case "ids":
                 mIds.clear();
                 reader.readIntList(mIds);
                 break;
-            }
-            case "tag": {
+            case "tag":
                 mTag = line.getValue();
                 break;
-            }
         }
     }
 

@@ -20,36 +20,34 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ResId extends Number implements Comparable<ResId> {
-    private static final Map<Integer, ResId> sCache = new HashMap<>();
-
     public static final ResId NULL = new ResId(0);
 
+    private static final Map<Integer, ResId> sCache = new HashMap<>();
+
     private final int mId;
+
+    private ResId(int id) {
+        mId = id;
+    }
 
     public static ResId of(int id) {
         return id != 0 ? sCache.computeIfAbsent(id, ResId::new) : NULL;
     }
 
     public static ResId of(int pkgId, int typeId, int entryId) {
-        assert (pkgId & 0xFF) == pkgId;
-        assert (typeId & 0xFF) == typeId;
-        assert (entryId & 0xFFFF) == entryId;
-        return ResId.of((pkgId << 24) | (typeId << 16) | entryId);
+        assert (pkgId & 0xFF) == pkgId && (typeId & 0xFF) == typeId && (entryId & 0xFFFF) == entryId;
+        return of((pkgId << 24) | (typeId << 16) | entryId);
     }
 
-    private ResId(int id) {
-        mId = id;
-    }
-
-    public int getPackageId() {
+    public int pkgId() {
         return (mId >>> 24) & 0xFF;
     }
 
-    public int getTypeId() {
+    public int typeId() {
         return (mId >>> 16) & 0xFF;
     }
 
-    public int getEntryId() {
+    public int entryId() {
         return mId & 0xFFFF;
     }
 

@@ -16,9 +16,11 @@
  */
 package brut.xml;
 
+import brut.common.Log;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import javax.xml.XMLConstants;
@@ -37,22 +39,29 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.logging.Logger;
 
 public final class XmlUtils {
-    private static final Logger LOGGER = Logger.getLogger("");
+    private static final String TAG = "";
 
-    private static final String FEATURE_DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl";
-    private static final String FEATURE_LOAD_EXTERNAL_DTD = "http://apache.org/xml/features/nonvalidating/load-external-dtd";
+    public static final String XML_PROLOG = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
+    public static final String XML_PREFIX = "xml";
+    public static final String XML_URI = "http://www.w3.org/XML/1998/namespace";
+    public static final String XMLNS_PREFIX = "xmlns";
+    public static final String XMLNS_URI = "http://www.w3.org/2000/xmlns/";
+
+    private static final String FEATURE_DISALLOW_DOCTYPE_DECL =
+        "http://apache.org/xml/features/disallow-doctype-decl";
+    private static final String FEATURE_LOAD_EXTERNAL_DTD =
+        "http://apache.org/xml/features/nonvalidating/load-external-dtd";
 
     private XmlUtils() {
         // Private constructor for utility class.
@@ -70,7 +79,7 @@ public final class XmlUtils {
             factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
             factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
         } catch (IllegalArgumentException ignored) {
-            LOGGER.warning("JAXP 1.5 Support is required to validate XML");
+            Log.w(TAG, "JAXP 1.5 Support is required to validate XML");
         }
 
         return factory.newDocumentBuilder();
@@ -84,25 +93,28 @@ public final class XmlUtils {
         return newDocumentBuilder(nsAware).newDocument();
     }
 
-    public static Document loadDocument(File file)
-            throws IOException, SAXException, ParserConfigurationException {
-        return loadDocument(file, false);
+    public static Document parseDocument(String xml) throws IOException, SAXException, ParserConfigurationException {
+        return parseDocument(xml, false);
     }
 
-    public static Document loadDocumentContent(String content, boolean nsAware)
+    public static Document parseDocument(String xml, boolean nsAware)
             throws IOException, SAXException, ParserConfigurationException {
         DocumentBuilder builder = newDocumentBuilder(nsAware);
-        InputStream in = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
-        return builder.parse(in);
+        StringReader reader = new StringReader(xml);
+        return builder.parse(new InputSource(reader));
+    }
+
+    public static Document loadDocument(File file) throws IOException, SAXException, ParserConfigurationException {
+        return loadDocument(file, false);
     }
 
     public static Document loadDocument(File file, boolean nsAware)
             throws IOException, SAXException, ParserConfigurationException {
         DocumentBuilder builder = newDocumentBuilder(nsAware);
-        // Not using the parse(File) method on purpose, so that we can control when
-        // to close it. Somehow parse(File) does not seem to close the file in all cases.
+        // Not using the parse(File) method on purpose, so that we can control when to close it.
+        // Somehow parse(File) does not seem to close the file in all cases.
         try (InputStream in = Files.newInputStream(file.toPath())) {
-            return builder.parse(in);
+            return builder.parse(new InputSource(in));
         }
     }
 
@@ -112,7 +124,7 @@ public final class XmlUtils {
         Transformer transformer = factory.newTransformer();
         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 
-        byte[] xmlDecl = "<?xml version=\"1.0\" encoding=\"utf-8\"?>".getBytes(StandardCharsets.US_ASCII);
+        byte[] xmlDecl = XML_PROLOG.getBytes(StandardCharsets.US_ASCII);
         byte[] newLine = System.lineSeparator().getBytes(StandardCharsets.US_ASCII);
 
         try (OutputStream out = Files.newOutputStream(file.toPath())) {

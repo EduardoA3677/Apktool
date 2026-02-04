@@ -17,8 +17,8 @@
 package brut.androlib;
 
 import brut.androlib.meta.ApkInfo;
-import brut.common.BrutException;
-import brut.directory.ExtFile;
+
+import java.io.File;
 
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -27,37 +27,41 @@ public class SparseFlagTest extends BaseTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        LOGGER.info("Unpacking sparse.apk && not-sparse.apk...");
-        TestUtils.copyResourceDir(SparseFlagTest.class, "sparse", sTmpDir);
+        log("Unpacking sparse.apk && not-sparse.apk...");
+        copyResourceDir(SparseFlagTest.class, "sparse", sTmpDir);
     }
 
     @Test
-    public void decodeWithExpectationOfSparseEntries() throws BrutException {
+    public void decodeWithExpectationOfSparseEntries() throws Exception {
         sConfig.setFrameworkTag("issue-3298");
 
-        LOGGER.info("Decoding sparse.apk...");
-        ExtFile testApk = new ExtFile(sTmpDir, "sparse.apk");
-        ExtFile testDir = new ExtFile(testApk + ".out");
-        ApkInfo apkInfo = new ApkDecoder(testApk, sConfig).decode(testDir);
+        log("Decoding sparse.apk...");
+        File testApk = new File(sTmpDir, "sparse.apk");
+        File testDir = new File(testApk + ".out");
+        ApkDecoder apkDecoder = new ApkDecoder(testApk, sConfig);
+        apkDecoder.decode(testDir);
+        ApkInfo apkInfo = apkDecoder.getApkInfo();
 
         assertTrue("Expecting sparse entries", apkInfo.getResourcesInfo().isSparseEntries());
 
-        LOGGER.info("Building sparse.apk...");
+        log("Building sparse.apk...");
         new ApkBuilder(testDir, sConfig).build(null);
     }
 
     @Test
-    public void decodeWithExpectationOfNoSparseEntries() throws BrutException {
+    public void decodeWithExpectationOfNoSparseEntries() throws Exception {
         sConfig.setFrameworkTag("issue-3298");
 
-        LOGGER.info("Decoding not-sparse.apk...");
-        ExtFile testApk = new ExtFile(sTmpDir, "not-sparse.apk");
-        ExtFile testDir = new ExtFile(testApk + ".out");
-        ApkInfo apkInfo = new ApkDecoder(testApk, sConfig).decode(testDir);
+        log("Decoding not-sparse.apk...");
+        File testApk = new File(sTmpDir, "not-sparse.apk");
+        File testDir = new File(testApk + ".out");
+        ApkDecoder apkDecoder = new ApkDecoder(testApk, sConfig);
+        apkDecoder.decode(testDir);
+        ApkInfo apkInfo = apkDecoder.getApkInfo();
 
         assertFalse("Expecting not-sparse entries", apkInfo.getResourcesInfo().isSparseEntries());
 
-        LOGGER.info("Building not-sparse.apk...");
+        log("Building not-sparse.apk...");
         new ApkBuilder(testDir, sConfig).build(null);
     }
 }

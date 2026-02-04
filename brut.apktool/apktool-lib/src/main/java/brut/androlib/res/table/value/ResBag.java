@@ -17,11 +17,11 @@
 package brut.androlib.res.table.value;
 
 import brut.androlib.exceptions.AndrolibException;
+import brut.androlib.res.xml.ValuesXmlSerializable;
+import brut.common.Log;
 
-import java.util.logging.Logger;
-
-public abstract class ResBag extends ResValue {
-    private static final Logger LOGGER = Logger.getLogger(ResBag.class.getName());
+public abstract class ResBag extends ResValue implements ValuesXmlSerializable {
+    private static final String TAG = ResBag.class.getName();
 
     protected final ResReference mParent;
 
@@ -41,7 +41,7 @@ public abstract class ResBag extends ResValue {
             case "style":
                 return ResStyle.parse(parent, rawItems);
             default:
-                LOGGER.warning("Unsupported type for bags: " + typeName);
+                Log.w(TAG, "Unsupported type for bags: " + typeName);
                 return null;
         }
     }
@@ -51,6 +51,7 @@ public abstract class ResBag extends ResValue {
         private final ResItem mValue;
 
         public RawItem(int key, ResItem value) {
+            assert value != null;
             mKey = key;
             mValue = value;
         }

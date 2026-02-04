@@ -19,10 +19,11 @@ package brut.androlib.meta;
 import brut.yaml.*;
 
 public class ResourcesInfo implements YamlSerializable {
-    private String mPackageId;
+    private Integer mPackageId;
     private String mPackageName;
     private Boolean mSparseEntries;
     private Boolean mCompactEntries;
+    private Boolean mKeepRawValues;
 
     public ResourcesInfo() {
         clear();
@@ -33,40 +34,43 @@ public class ResourcesInfo implements YamlSerializable {
         mPackageName = null;
         mSparseEntries = null;
         mCompactEntries = null;
+        mKeepRawValues = null;
     }
 
     public boolean isEmpty() {
-        return mPackageId == null && mPackageName == null
-                && mSparseEntries == null && mCompactEntries == null;
+        return mPackageId == null
+            && mPackageName == null
+            && mSparseEntries == null
+            && mCompactEntries == null
+            && mKeepRawValues == null;
     }
 
     @Override
     public void readItem(YamlReader reader) {
         YamlLine line = reader.getLine();
         switch (line.getKey()) {
-            case "packageId": {
-                mPackageId = line.getValue();
+            case "packageId":
+                mPackageId = line.getValueInt();
                 break;
-            }
-            case "packageName": {
+            case "packageName":
                 mPackageName = line.getValue();
                 break;
-            }
-            case "sparseEntries": {
+            case "sparseEntries":
                 mSparseEntries = line.getValueBool();
                 break;
-            }
-            case "compactEntries": {
+            case "compactEntries":
                 mCompactEntries = line.getValueBool();
                 break;
-            }
+            case "keepRawValues":
+                mKeepRawValues = line.getValueBool();
+                break;
         }
     }
 
     @Override
     public void write(YamlWriter writer) {
         if (mPackageId != null) {
-            writer.writeString("packageId", mPackageId);
+            writer.writeInt("packageId", mPackageId);
         }
         if (mPackageName != null) {
             writer.writeString("packageName", mPackageName);
@@ -77,13 +81,16 @@ public class ResourcesInfo implements YamlSerializable {
         if (mCompactEntries != null) {
             writer.writeBool("compactEntries", mCompactEntries);
         }
+        if (mKeepRawValues != null) {
+            writer.writeBool("keepRawValues", mKeepRawValues);
+        }
     }
 
-    public String getPackageId() {
-        return mPackageId;
+    public int getPackageId() {
+        return mPackageId != null ? mPackageId : -1;
     }
 
-    public void setPackageId(String packageId) {
+    public void setPackageId(int packageId) {
         mPackageId = packageId;
     }
 
@@ -109,5 +116,13 @@ public class ResourcesInfo implements YamlSerializable {
 
     public void setCompactEntries(boolean compactEntries) {
         mCompactEntries = compactEntries;
+    }
+
+    public boolean isKeepRawValues() {
+        return mKeepRawValues != null ? mKeepRawValues : false;
+    }
+
+    public void setKeepRawValues(boolean keepRawValues) {
+        mKeepRawValues = keepRawValues;
     }
 }

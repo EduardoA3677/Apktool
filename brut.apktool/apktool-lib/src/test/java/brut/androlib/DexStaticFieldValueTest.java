@@ -16,12 +16,7 @@
  */
 package brut.androlib;
 
-import brut.common.BrutException;
-import brut.directory.ExtFile;
-
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -30,44 +25,44 @@ public class DexStaticFieldValueTest extends BaseTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        sTestOrigDir = new ExtFile(sTmpDir, "issue2543-orig");
-        sTestNewDir = new ExtFile(sTmpDir, "issue2543-new");
+        sTestOrigDir = new File(sTmpDir, "issue2543-orig");
+        sTestNewDir = new File(sTmpDir, "issue2543-new");
 
-        LOGGER.info("Unpacking issue2543...");
-        TestUtils.copyResourceDir(DexStaticFieldValueTest.class, "issue2543", sTestOrigDir);
+        log("Unpacking issue2543...");
+        copyResourceDir(DexStaticFieldValueTest.class, "issue2543", sTestOrigDir);
 
         sConfig.setBaksmaliDebugMode(false);
 
-        LOGGER.info("Building issue2543.jar...");
-        ExtFile testJar = new ExtFile(sTmpDir, "issue2543.jar");
+        log("Building issue2543.jar...");
+        File testJar = new File(sTmpDir, "issue2543.jar");
         new ApkBuilder(sTestOrigDir, sConfig).build(testJar);
 
-        LOGGER.info("Decoding issue2543.jar...");
+        log("Decoding issue2543.jar...");
         new ApkDecoder(testJar, sConfig).decode(sTestNewDir);
     }
 
     @Test
-    public void disassembleDexFileToKeepDefaultParameters() throws IOException {
-        String expected = ".class public LHelloWorld;\n"
-                + ".super Ljava/lang/Object;\n"
-                + "\n"
-                + "\n"
-                + "# static fields\n"
-                + ".field private static b:Z = false\n"
-                + "\n"
-                + ".field private static c:Z = true\n"
-                + "\n"
-                + "\n"
-                + "# direct methods\n"
-                + ".method public static main([Ljava/lang/String;)V\n"
-                + "    .locals 1\n"
-                + "\n"
-                + "    return-void\n"
-                + ".end method";
+    public void disassembleDexFileToKeepDefaultParameters() throws Exception {
+        String expected =
+            ".class public LHelloWorld;\n"
+          + ".super Ljava/lang/Object;\n"
+          + "\n"
+          + "\n"
+          + "# static fields\n"
+          + ".field private static b:Z = false\n"
+          + "\n"
+          + ".field private static c:Z = true\n"
+          + "\n"
+          + "\n"
+          + "# direct methods\n"
+          + ".method public static main([Ljava/lang/String;)V\n"
+          + "    .locals 1\n"
+          + "\n"
+          + "    return-void\n"
+          + ".end method";
 
-        File smali = new File(sTestNewDir, "smali/HelloWorld.smali");
-        String obtained = new String(Files.readAllBytes(smali.toPath()));
+        String obtained = readTextFile(new File(sTestNewDir, "smali/HelloWorld.smali"));
 
-        assertEquals(TestUtils.replaceNewlines(expected), TestUtils.replaceNewlines(obtained));
+        assertEquals(replaceNewlines(expected), replaceNewlines(obtained));
     }
 }

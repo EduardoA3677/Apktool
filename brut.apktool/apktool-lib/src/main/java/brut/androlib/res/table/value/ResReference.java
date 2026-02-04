@@ -22,94 +22,87 @@ import brut.androlib.res.table.ResEntry;
 import brut.androlib.res.table.ResEntrySpec;
 import brut.androlib.res.table.ResId;
 import brut.androlib.res.table.ResPackage;
-import brut.androlib.res.xml.ResXmlEncodable;
-import brut.androlib.res.xml.ValuesXmlSerializable;
 import org.xmlpull.v1.XmlSerializer;
 
 import java.io.IOException;
 import java.util.Objects;
 
-public class ResReference extends ResItem implements ResXmlEncodable, ValuesXmlSerializable {
-    public enum Type { RESOURCE, ATTRIBUTE }
-
-    public static final ResReference NULL = new ResReference(null, null, null, null);
-
+public class ResReference extends ResItem {
     private final ResPackage mPackage;
-    private final ResId mId;
-    private final String mName;
-    private final Type mType;
+    private final ResId mResId;
+    private final boolean mAsAttr;
 
-    public ResReference(ResPackage pkg, ResId id) {
-        this(pkg, id, null, Type.RESOURCE);
+    public ResReference(ResPackage pkg, ResId resId) {
+        this(pkg, resId, false);
     }
 
-    public ResReference(ResPackage pkg, String name) {
-        this(pkg, null, name, Type.RESOURCE);
-    }
-
-    public ResReference(ResPackage pkg, ResId id, String name) {
-        this(pkg, id, name, Type.RESOURCE);
-    }
-
-    public ResReference(ResPackage pkg, ResId id, Type type) {
-        this(pkg, id, null, type);
-    }
-
-    public ResReference(ResPackage pkg, String name, Type type) {
-        this(pkg, null, name, type);
-    }
-
-    public ResReference(ResPackage pkg, ResId id, String name, Type type) {
+    public ResReference(ResPackage pkg, ResId resId, boolean asAttr) {
+        super(asAttr ? TYPE_ATTRIBUTE : TYPE_REFERENCE);
+        assert pkg != null && resId != null;
         mPackage = pkg;
-        mId = id != null ? id : ResId.NULL;
-        mName = name;
-        mType = type;
+        mResId = resId;
+        mAsAttr = asAttr;
     }
 
     public ResPackage getPackage() {
         return mPackage;
     }
 
-    public ResId getId() {
-        return mId;
-    }
-
-    public String getName() {
-        return mName;
+    public ResId getResId() {
+        return mResId;
     }
 
     public ResEntrySpec resolve() throws AndrolibException {
-        if (mPackage != null && mId != ResId.NULL) {
+        if (mPackage != null && mResId != ResId.NULL) {
+            ResId resId = fixDynamicResourceId(mResId);
             try {
-                return mPackage.getTable().getEntrySpec(mId);
+                return mPackage.getTable().resolve(resId);
             } catch (UndefinedResObjectException ignored) {
             }
         }
-
         return null;
     }
 
-    @Override
-    public String encodeAsResXmlValue() throws AndrolibException {
-        if (mName != null) {
-            return mName;
+    public ResEntry resolveEntry() throws AndrolibException {
+        if (mPackage != null && mResId != ResId.NULL) {
+            ResId resId = fixDynamicResourceId(mResId);
+            try {
+                return mPackage.getTable().resolveEntry(resId);
+            } catch (UndefinedResObjectException ignored) {
+            }
         }
+        return null;
+    }
 
-        ResEntrySpec spec = resolve();
-        if (spec == null) {
-            return "@null";
+    private ResId fixDynamicResourceId(ResId resId) {
+        if (resId.pkgId() == 0 && mPackage.getId() != 0) {
+            // If the package ID is 0x00, that means that a shared library is accessing its own local resource,
+            // so fix it up with calling package ID.
+            resId = ResId.of(mPackage.getId(), resId.typeId(), resId.entryId());
         }
-
-        boolean isAttrRef = mType == Type.ATTRIBUTE;
-        boolean excludeType = isAttrRef && spec.getTypeName().equals("attr");
-
-        return (isAttrRef ? "?" : "@") + spec.getFullName(mPackage, excludeType);
+        return resId;
     }
 
     @Override
-    public void serializeToValuesXml(XmlSerializer serial, ResEntry entry)
-            throws AndrolibException, IOException {
-        String type = entry.getTypeName();
+    public String toXmlTextValue() throws AndrolibException {
+        ResEntrySpec spec = resolve();
+        if (spec == null) {
+            // @null is a special primitive, not a true reference, but we have to fall back to it if we can't
+            // resolve the reference.
+            return "@null";
+        }
+
+        boolean includePackage = mPackage.getGroup() != spec.getPackage().getGroup();
+        boolean includeType = !mAsAttr || !spec.getTypeSpec().getName().equals("attr");
+        return (mAsAttr ? "?" : "@")
+             + (includePackage ? spec.getPackage().getName() + ":" : "")
+             + (includeType ? spec.getTypeSpec().getName() + "/" : "")
+             + spec.getName();
+    }
+
+    @Override
+    public void serializeToValuesXml(XmlSerializer serial, ResEntry entry) throws AndrolibException, IOException {
+        String typeName = entry.getType().getName();
 
         // A bag type with a reference value must be an <item> tag.
         // Otherwise, when the decoded app is rebuilt, the reference will be lost.
@@ -118,29 +111,23 @@ public class ResReference extends ResItem implements ResXmlEncodable, ValuesXmlS
         // Only set body if not @null or the entry is a <string> tag.
         // @null is the default value for all item types except string.
         // Note: We never set @null to <id> tags.
-        boolean needsBody = resolve() != null || type.equals("string");
+        boolean needsBody = resolve() != null || typeName.equals("string");
 
-        String tagName = asItem ? "item" : type;
+        String tagName = asItem ? "item" : typeName;
         serial.startTag(null, tagName);
         if (asItem) {
-            serial.attribute(null, "type", type);
+            serial.attribute(null, "type", typeName);
         }
         serial.attribute(null, "name", entry.getName());
         if (needsBody) {
-            serial.text(encodeAsResXmlValue());
+            serial.text(toXmlTextValue());
         }
         serial.endTag(null, tagName);
     }
 
     @Override
-    public String getFormat() {
-        return "reference";
-    }
-
-    @Override
     public String toString() {
-        return String.format("ResReference{pkg=%s, id=%s, name=%s, type=%s}",
-            mPackage, mId, mName, mType);
+        return String.format("ResReference{pkg=%s, id=%s, type=%s}", mPackage, mResId, mAsAttr ? "attr" : "ref");
     }
 
     @Override
@@ -150,16 +137,15 @@ public class ResReference extends ResItem implements ResXmlEncodable, ValuesXmlS
         }
         if (obj instanceof ResReference) {
             ResReference other = (ResReference) obj;
-            return Objects.equals(mPackage, other.mPackage)
-                    && Objects.equals(mId, other.mId)
-                    && Objects.equals(mName, other.mName)
-                    && Objects.equals(mType, other.mType);
+            return mPackage.equals(other.mPackage)
+                && mResId == other.mResId
+                && mAsAttr == other.mAsAttr;
         }
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(mPackage, mId, mName, mType);
+        return Objects.hash(mPackage, mResId, mAsAttr);
     }
 }

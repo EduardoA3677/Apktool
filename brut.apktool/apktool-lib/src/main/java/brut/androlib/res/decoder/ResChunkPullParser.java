@@ -16,7 +16,7 @@
  */
 package brut.androlib.res.decoder;
 
-import brut.androlib.res.decoder.data.ResChunkHeader;
+import brut.androlib.res.data.ResChunkHeader;
 import brut.util.BinaryDataInputStream;
 
 import java.io.EOFException;
@@ -129,11 +129,11 @@ public class ResChunkPullParser {
             mChunkOffset = mIn.position();
             ResChunkHeader chunkHeader = ResChunkHeader.read(mIn);
 
-            if (chunkHeader.headerSize < ResChunkHeader.HEADER_SIZE
+            if (chunkHeader.headerSize < ResChunkHeader.SIZE
                     || chunkHeader.size < chunkHeader.headerSize) {
-                throw new IOException(String.format(
-                    "Invalid chunk header: type=0x%04x, headerSize=%d, size=%d",
-                    chunkHeader.type, chunkHeader.headerSize, chunkHeader.size));
+                throw new IOException(
+                    String.format("Invalid chunk header: type=0x%04x, headerSize=%s, size=%s",
+                        chunkHeader.type, chunkHeader.headerSize, chunkHeader.size));
             }
 
             mChunkHeader = chunkHeader;

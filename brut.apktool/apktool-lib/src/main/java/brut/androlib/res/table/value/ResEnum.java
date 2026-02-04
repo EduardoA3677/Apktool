@@ -16,14 +16,12 @@
  */
 package brut.androlib.res.table.value;
 
-import android.util.TypedValue;
-import brut.androlib.Config;
 import brut.androlib.exceptions.AndrolibException;
-import brut.androlib.res.table.ResConfig;
 import brut.androlib.res.table.ResEntry;
 import brut.androlib.res.table.ResEntrySpec;
 import brut.androlib.res.table.ResId;
 import brut.androlib.res.table.ResPackage;
+import brut.common.Log;
 import org.xmlpull.v1.XmlSerializer;
 
 import java.io.IOException;
@@ -31,10 +29,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.logging.Logger;
 
 public class ResEnum extends ResAttribute {
-    private static final Logger LOGGER = Logger.getLogger(ResEnum.class.getName());
+    private static final String TAG = ResEnum.class.getName();
 
     private final Symbol[] mSymbols;
     private Map<Integer, Symbol[]> mSymbolsCache;
@@ -42,14 +39,14 @@ public class ResEnum extends ResAttribute {
 
     public ResEnum(ResReference parent, int type, int min, int max, int l10n, Symbol[] symbols) {
         super(parent, type, min, max, l10n);
+        assert parent != null && symbols != null;
         mSymbols = symbols;
     }
 
     @Override
     public void resolveKeys() throws AndrolibException {
         ResPackage pkg = mParent.getPackage();
-        Config config = pkg.getTable().getConfig();
-        boolean skipUnresolved = config.getDecodeResolve() == Config.DecodeResolve.LAZY;
+        boolean skipUnresolved = pkg.getTable().getConfig().isDecodeResolveLazy();
 
         for (Symbol symbol : mSymbols) {
             ResReference key = symbol.getKey();
@@ -57,22 +54,21 @@ public class ResEnum extends ResAttribute {
                 continue;
             }
 
-            ResId entryId = key.getId();
+            ResId keyId = key.getResId();
 
             // #2836 - Skip item if the resource cannot be resolved.
-            if (skipUnresolved || entryId.getPackageId() != pkg.getId()) {
-                LOGGER.warning(String.format(
-                    "null enum reference: key=%s, value=%s", key, symbol.getValue()));
+            if (skipUnresolved || keyId.pkgId() != pkg.getId()) {
+                Log.w(TAG, "Unresolved enum reference: key=%s, value=%s", key, symbol.getValue());
                 continue;
             }
 
-            pkg.addEntrySpec(entryId, ResEntrySpec.DUMMY_PREFIX + entryId);
-            pkg.addEntry(entryId, ResConfig.DEFAULT, ResCustom.ID);
+            pkg.addEntrySpec(keyId.typeId(), keyId.entryId(), ResEntrySpec.DUMMY_PREFIX + keyId);
+            pkg.addEntry(keyId.typeId(), keyId.entryId(), ResCustom.ID);
         }
     }
 
     @Override
-    protected Symbol[] getSymbolsForValue(ResItem value) throws AndrolibException {
+    protected Symbol[] getSymbolsForValue(ResItem value) {
         if (!isSymbolValueType(value)) {
             return null;
         }
@@ -81,16 +77,16 @@ public class ResEnum extends ResAttribute {
         return getSymbols(data);
     }
 
-    private boolean isSymbolValueType(ResItem value) throws AndrolibException {
+    private boolean isSymbolValueType(ResItem value) {
         if (!(value instanceof ResPrimitive)) {
             return false;
         }
 
-        int type = ((ResPrimitive) value).getType();
-        return type == TypedValue.TYPE_INT_DEC || type == TypedValue.TYPE_INT_HEX;
+        int type = value.getType();
+        return type == TYPE_INT_DEC || type == TYPE_INT_HEX;
     }
 
-    private Symbol[] getSymbols(int data) throws AndrolibException {
+    private Symbol[] getSymbols(int data) {
         if (mSymbolsCache == null) {
             // Lazily establish a symbols cache for performance.
             mSymbolsCache = new HashMap<>();
@@ -118,7 +114,7 @@ public class ResEnum extends ResAttribute {
     }
 
     @Override
-    protected String formatValueToSymbols(ResItem value) throws AndrolibException {
+    protected String formatValueFromSymbols(ResItem value) throws AndrolibException {
         if (!isSymbolValueType(value)) {
             return null;
         }
@@ -167,15 +163,15 @@ public class ResEnum extends ResAttribute {
 
             serial.startTag(null, "enum");
             serial.attribute(null, "name", keySpec.getName());
-            serial.attribute(null, "value", symbol.getValue().encodeAsResXmlAttrValue());
+            serial.attribute(null, "value", symbol.getValue().toXmlAttributeValue());
             serial.endTag(null, "enum");
         }
     }
 
     @Override
     public String toString() {
-        return String.format("ResEnum{parent=%s, type=0x%04x, min=%d, max=%d, l10n=%d, symbols=%s}",
-            mParent, mType, mMin, mMax, mL10n, mSymbols);
+        return String.format("ResEnum{parent=%s, type=0x%04x, min=%s, max=%s, l10n=%s, symbols=%s}",
+            mParent, mType, mMin, mMax, mL10n, Arrays.toString(mSymbols));
     }
 
     @Override
@@ -185,18 +181,18 @@ public class ResEnum extends ResAttribute {
         }
         if (obj instanceof ResEnum) {
             ResEnum other = (ResEnum) obj;
-            return Objects.equals(mParent, other.mParent)
-                    && mType == other.mType
-                    && mMin == other.mMin
-                    && mMax == other.mMax
-                    && mL10n == other.mL10n
-                    && Objects.equals(mSymbols, other.mSymbols);
+            return mParent.equals(other.mParent)
+                && mType == other.mType
+                && mMin == other.mMin
+                && mMax == other.mMax
+                && mL10n == other.mL10n
+                && Arrays.equals(mSymbols, other.mSymbols);
         }
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(mParent, mType, mMin, mMax, mL10n, mSymbols);
+        return Objects.hash(mParent, mType, mMin, mMax, mL10n, Arrays.hashCode(mSymbols));
     }
 }

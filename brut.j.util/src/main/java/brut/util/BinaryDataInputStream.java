@@ -83,13 +83,11 @@ public class BinaryDataInputStream extends FilterInputStream implements DataInpu
             return 0;
         }
         if (expected < 0) {
-            throw new IOException(String.format(
-                "Illegal backwards jump from %d to %d", mPosition, pos));
+            throw new IOException(String.format("Illegal backwards jump from %s to %s", mPosition, pos));
         }
         long skipped = skip(expected);
         if (skipped != expected) {
-            throw new IOException(String.format(
-                "Jump failed: skipped %d bytes (expected: %d)", skipped, expected));
+            throw new IOException(String.format("Jump failed: skipped %s bytes (expected: %s)", skipped, expected));
         }
         return skipped;
     }
@@ -316,8 +314,7 @@ public class BinaryDataInputStream extends FilterInputStream implements DataInpu
         if (n > remain) {
             n = remain;
         }
-        // For many reasons, skip() may end up skipping less bytes
-        // than requested. Try harder.
+        // For many reasons, skip() may end up skipping less bytes than requested. Try harder.
         long skipped = 0;
         long s;
         while (skipped < n && (s = in.skip(n - skipped)) > 0) {
@@ -334,8 +331,7 @@ public class BinaryDataInputStream extends FilterInputStream implements DataInpu
 
     @Override
     public synchronized void mark(int readlimit) {
-        // We can't throw an exception here, so mark even if mark isn't
-        // supported, since reset won't work anyway.
+        // We can't throw an exception here, so mark even if mark isn't supported, since reset won't work anyway.
         in.mark(readlimit);
         mMark = mPosition;
     }

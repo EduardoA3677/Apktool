@@ -16,16 +16,12 @@
  */
 package brut.androlib;
 
-import brut.common.BrutException;
-import brut.directory.ExtFile;
+import brut.xml.XmlUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
-import org.xml.sax.SAXException;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -35,19 +31,19 @@ public class NoNetworkConfigTest extends BaseTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        sTestOrigDir = new ExtFile(sTmpDir, "network_config-orig");
-        sTestNewDir = new ExtFile(sTmpDir, "network_config-new");
+        sTestOrigDir = new File(sTmpDir, "network_config-orig");
+        sTestNewDir = new File(sTmpDir, "network_config-new");
 
-        LOGGER.info("Unpacking network_config...");
-        TestUtils.copyResourceDir(NoNetworkConfigTest.class, "network_config/none", sTestOrigDir);
+        log("Unpacking network_config...");
+        copyResourceDir(NoNetworkConfigTest.class, "network_config/none", sTestOrigDir);
 
         sConfig.setNetSecConf(true);
 
-        LOGGER.info("Building network_config.apk...");
-        ExtFile testApk = new ExtFile(sTmpDir, "network_config.apk");
+        log("Building network_config.apk...");
+        File testApk = new File(sTmpDir, "network_config.apk");
         new ApkBuilder(sTestOrigDir, sConfig).build(testApk);
 
-        LOGGER.info("Decoding network_config.apk...");
+        log("Decoding network_config.apk...");
         new ApkDecoder(testApk, sConfig).decode(sTestNewDir);
     }
 
@@ -57,31 +53,31 @@ public class NoNetworkConfigTest extends BaseTest {
     }
 
     @Test
-    public void netSecConfGeneric() throws IOException, SAXException {
-        LOGGER.info("Comparing network security configuration file...");
+    public void netSecConfGeneric() throws Exception {
+        log("Comparing network security configuration file...");
 
-        String expected = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-                + "<network-security-config>\n"
-                + "    <base-config>\n"
-                + "        <trust-anchors>\n"
-                + "            <certificates src=\"system\"/>\n"
-                + "            <certificates src=\"user\"/>\n"
-                + "        </trust-anchors>\n"
-                + "    </base-config>\n"
-                + "</network-security-config>";
+        String expected =
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+          + "<network-security-config>\n"
+          + "    <base-config>\n"
+          + "        <trust-anchors>\n"
+          + "            <certificates src=\"system\"/>\n"
+          + "            <certificates src=\"user\"/>\n"
+          + "        </trust-anchors>\n"
+          + "    </base-config>\n"
+          + "</network-security-config>";
 
-        File xml = new File(sTestNewDir, "res/xml/network_security_config.xml");
-        String obtained = new String(Files.readAllBytes(xml.toPath()));
+        String obtained = readTextFile(new File(sTestNewDir, "res/xml/network_security_config.xml"));
 
         assertXMLEqual(expected, obtained);
     }
 
     @Test
-    public void netSecConfInManifest() throws BrutException {
-        LOGGER.info("Validating network security config in Manifest...");
+    public void netSecConfInManifest() throws Exception {
+        log("Validating network security config in Manifest...");
 
         // Load the XML document
-        Document doc = loadDocument(new File(sTestNewDir, "AndroidManifest.xml"));
+        Document doc = XmlUtils.loadDocument(new File(sTestNewDir, "AndroidManifest.xml"));
 
         // Check if network security config attribute is set correctly
         Node application = doc.getElementsByTagName("application").item(0);

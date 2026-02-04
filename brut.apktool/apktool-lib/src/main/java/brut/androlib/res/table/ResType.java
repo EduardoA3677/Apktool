@@ -23,16 +23,17 @@ public class ResType {
     private final ResConfig mConfig;
 
     public ResType(ResTypeSpec spec, ResConfig config) {
+        assert spec != null && config != null;
         mSpec = spec;
         mConfig = config;
     }
 
-    public ResTypeSpec getSpec() {
-        return mSpec;
-    }
-
     public ResPackage getPackage() {
         return mSpec.getPackage();
+    }
+
+    public ResTypeSpec getSpec() {
+        return mSpec;
     }
 
     public int getId() {
@@ -63,8 +64,8 @@ public class ResType {
         }
         if (obj instanceof ResType) {
             ResType other = (ResType) obj;
-            return Objects.equals(mSpec, other.mSpec)
-                    && Objects.equals(mConfig, other.mConfig);
+            return mSpec.equals(other.mSpec)
+                && mConfig.equals(other.mConfig);
         }
         return false;
     }

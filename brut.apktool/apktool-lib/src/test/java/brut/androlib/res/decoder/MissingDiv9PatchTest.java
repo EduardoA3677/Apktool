@@ -17,10 +17,7 @@
 package brut.androlib.res.decoder;
 
 import brut.androlib.BaseTest;
-import brut.androlib.TestUtils;
-import brut.androlib.res.decoder.data.NinePatchData;
-import brut.common.BrutException;
-import brut.directory.ExtFile;
+import brut.androlib.res.data.NinePatchData;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -37,7 +34,7 @@ public class MissingDiv9PatchTest extends BaseTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        TestUtils.copyResourceDir(MissingDiv9PatchTest.class, "res/decoder/issue1522", sTmpDir);
+        copyResourceDir(MissingDiv9PatchTest.class, "res/decoder/issue1522", sTmpDir);
     }
 
     @Test
@@ -55,7 +52,7 @@ public class MissingDiv9PatchTest extends BaseTest {
         BufferedImage image = ImageIO.read(new ByteArrayInputStream(data));
         int height = image.getHeight() - 1;
 
-        // First and last pixel will be invisible, so lets check the first column and ensure its all black
+        // First and last pixel will be invisible, so let's check the first column and ensure its all black.
         for (int y = 1; y < height; y++) {
             assertEquals("y coordinate failed at: " + y, NinePatchData.COLOR_TICK, image.getRGB(0, y));
         }

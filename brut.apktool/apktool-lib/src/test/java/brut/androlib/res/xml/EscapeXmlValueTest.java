@@ -16,16 +16,24 @@
  */
 package brut.androlib.res.xml;
 
-import brut.androlib.exceptions.AndrolibException;
+import brut.androlib.BaseTest;
 
-public interface ResXmlEncodable {
-    String encodeAsResXmlValue() throws AndrolibException;
+import org.junit.*;
+import static org.junit.Assert.*;
 
-    default String encodeAsResXmlItemValue() throws AndrolibException {
-        return encodeAsResXmlValue();
+public class EscapeXmlValueTest extends BaseTest {
+
+    @Test
+    public void escapeXmlValueTest() {
+        assertEquals("foo", escape("foo"));
+        assertEquals("\"'foo'\"", escape("'foo'"));
+        assertEquals("\\\"foo\\\"", escape("\"foo\""));
+        assertEquals("foo&amp;bar", escape("foo&bar"));
+        assertEquals("&lt;foo>", escape("<foo>"));
+        assertEquals("&lt;![CDATA[foo]]&gt;", escape("<![CDATA[foo]]>"));
     }
 
-    default String encodeAsResXmlAttrValue() throws AndrolibException {
-        return encodeAsResXmlValue();
+    private static String escape(String value) {
+        return ResStringEncoder.encodeTextValue(value);
     }
 }

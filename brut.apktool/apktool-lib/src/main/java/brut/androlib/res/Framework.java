@@ -21,30 +21,29 @@ import brut.androlib.exceptions.AndrolibException;
 import brut.androlib.exceptions.FrameworkNotFoundException;
 import brut.androlib.meta.ApkInfo;
 import brut.androlib.res.decoder.BinaryResourceParser;
-import brut.androlib.res.decoder.data.FlagsOffset;
-import brut.androlib.res.table.ResPackage;
 import brut.androlib.res.table.ResTable;
+import brut.common.Log;
 import brut.util.BrutIO;
 import brut.util.OS;
 import brut.util.OSDetection;
-import com.google.common.primitives.Ints;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.logging.Logger;
 import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public class Framework {
-    private static final Logger LOGGER = Logger.getLogger(Framework.class.getName());
+    private static final String TAG = Framework.class.getName();
 
     private static final File DEFAULT_DIRECTORY;
-
     static {
         String userHome = System.getProperty("user.home");
         Path defDir;
@@ -78,16 +77,9 @@ public class Framework {
             }
 
             byte[] data = BrutIO.readAndClose(zip.getInputStream(entry));
-            BinaryResourceParser parser = parseResources(data);
-            publicizeResources(data, parser.getFlagsOffsets());
-
-            List<ResPackage> pkgs = parser.getPackages();
-            if (pkgs.isEmpty()) {
-                throw new AndrolibException("No packages in resources.arsc in file: " + apkFile);
-            }
-
-            ResPackage pkg = selectPackageWithMostEntrySpecs(pkgs);
-            File outFile = new File(getDirectory(), pkg.getId() + getApkSuffix());
+            ResTable table = parseAndPublicizeResources(data);
+            int pkgId = table.listPackageGroups().iterator().next().getId();
+            File outFile = new File(getDirectory(), pkgId + getApkSuffix());
 
             try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(outFile.toPath()))) {
                 out.setMethod(ZipOutputStream.STORED);
@@ -116,43 +108,34 @@ public class Framework {
                 }
             }
 
-            LOGGER.info("Framework installed to: " + outFile);
+            Log.i(TAG, "Framework installed to: " + outFile);
         } catch (IOException ex) {
             throw new AndrolibException(ex);
         }
     }
 
-    private BinaryResourceParser parseResources(byte[] data) throws AndrolibException {
+    private ResTable parseAndPublicizeResources(byte[] data) throws AndrolibException {
         ResTable table = new ResTable(new ApkInfo(), mConfig);
         BinaryResourceParser parser = new BinaryResourceParser(table, true, true);
+        parser.enableCollectFlagsOffsets();
         parser.parse(new ByteArrayInputStream(data));
-        return parser;
-    }
 
-    private ResPackage selectPackageWithMostEntrySpecs(List<ResPackage> pkgs) {
-        ResPackage ret = pkgs.get(0);
-        int count = 0;
+        if (table.getPackageGroupCount() == 0) {
+            throw new AndrolibException("No packages in resources.arsc in file.");
+        }
 
-        for (ResPackage pkg : pkgs) {
-            if (pkg.getEntrySpecCount() > count) {
-                count = pkg.getEntrySpecCount();
-                ret = pkg;
+        // Publicize all entry specs.
+        ByteBuffer buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
+        for (Pair<Long, Integer> pair : parser.getEntrySpecFlagsOffsets()) {
+            int position = pair.getKey().intValue();
+            int count = pair.getValue();
+            for (int i = 0; i < count; i++, position += 4) {
+                int flags = buffer.getInt(position);
+                buffer.putInt(position, flags | 0x40000000); // ResTable_typeSpec::SPEC_PUBLIC
             }
         }
 
-        return ret;
-    }
-
-    private void publicizeResources(byte[] data, List<FlagsOffset> flagsOffsets) {
-        for (FlagsOffset flags : flagsOffsets) {
-            int offset = ((int) flags.offset) + 3;
-            int end = offset + 4 * flags.count;
-
-            while (offset < end) {
-                data[offset] |= (byte) 0x40;
-                offset += 4;
-            }
-        }
+        return table;
     }
 
     public File getDirectory() throws AndrolibException {
@@ -213,7 +196,7 @@ public class Framework {
         return getApkSuffix(mConfig.getFrameworkTag());
     }
 
-    private String getApkSuffix(String tag) {
+    private static String getApkSuffix(String tag) {
         return ((tag != null && !tag.isEmpty()) ? "-" + tag : "") + ".apk";
     }
 
@@ -223,7 +206,7 @@ public class Framework {
 
     public void cleanDirectory() throws AndrolibException {
         for (File apkFile : listDirectory()) {
-            LOGGER.info("Removing framework file: " + apkFile.getName());
+            Log.i(TAG, "Removing framework file: " + apkFile.getName());
             OS.rmfile(apkFile);
         }
     }
@@ -242,7 +225,7 @@ public class Framework {
         return apkFiles;
     }
 
-    private boolean isValidApkName(String fileName, String suffix, boolean ignoreTag) {
+    private static boolean isValidApkName(String fileName, String suffix, boolean ignoreTag) {
         if (!fileName.endsWith(suffix)) {
             return false;
         }
@@ -250,26 +233,24 @@ public class Framework {
             return true;
         }
 
-        String baseName = fileName.substring(0, fileName.length() - suffix.length());
-        Integer id = Ints.tryParse(baseName);
-        return id != null && id > 0;
+        int len = fileName.length() - suffix.length();
+        if (len == 0) {
+            return false;
+        }
+        for (int i = 0; i < len; i++) {
+            char ch = fileName.charAt(i);
+            if (ch < '0' || ch > '9') {
+                return false;
+            }
+        }
+        return true;
     }
 
     public void publicizeResources(File arscFile) throws AndrolibException {
-        byte[] data = new byte[(int) arscFile.length()];
-
-        try (InputStream in = Files.newInputStream(arscFile.toPath())) {
-            //noinspection ResultOfMethodCallIgnored
-            in.read(data);
-        } catch (IOException ex) {
-            throw new AndrolibException(ex);
-        }
-
-        BinaryResourceParser parser = parseResources(data);
-        publicizeResources(data, parser.getFlagsOffsets());
-
-        try (OutputStream out = Files.newOutputStream(arscFile.toPath())) {
-            out.write(data);
+        try {
+            byte[] data = Files.readAllBytes(arscFile.toPath());
+            parseAndPublicizeResources(data);
+            Files.write(arscFile.toPath(), data);
         } catch (IOException ex) {
             throw new AndrolibException(ex);
         }

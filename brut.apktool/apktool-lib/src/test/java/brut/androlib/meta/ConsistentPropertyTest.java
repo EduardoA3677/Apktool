@@ -17,7 +17,6 @@
 package brut.androlib.meta;
 
 import brut.androlib.BaseTest;
-import brut.common.BrutException;
 
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -25,7 +24,7 @@ import static org.junit.Assert.*;
 public class ConsistentPropertyTest extends BaseTest {
 
     @Test
-    public void testAssertingAllKnownApkInfoProperties() throws BrutException {
+    public void testAssertingAllKnownApkInfoProperties() throws Exception {
         ApkInfo apkInfo = ApkInfo.load(getClass().getResourceAsStream("/meta/basic.yml"));
         assertEquals("2.8.0", apkInfo.getVersion());
         assertEquals("basic.apk", apkInfo.getApkFileName());
@@ -34,10 +33,10 @@ public class ConsistentPropertyTest extends BaseTest {
         assertEquals("4", apkInfo.getSdkInfo().getMinSdkVersion());
         assertEquals("22", apkInfo.getSdkInfo().getTargetSdkVersion());
         assertEquals("30", apkInfo.getSdkInfo().getMaxSdkVersion());
-        assertEquals("127", apkInfo.getResourcesInfo().getPackageId());
+        assertEquals(127, apkInfo.getResourcesInfo().getPackageId());
         assertEquals("com.test.basic", apkInfo.getResourcesInfo().getPackageName());
         assertTrue(apkInfo.getResourcesInfo().isSparseEntries());
-        assertEquals("71", apkInfo.getVersionInfo().getVersionCode());
+        assertEquals(71, apkInfo.getVersionInfo().getVersionCode());
         assertEquals("1.0.70", apkInfo.getVersionInfo().getVersionName());
         assertEquals(2, apkInfo.getDoNotCompress().size());
     }

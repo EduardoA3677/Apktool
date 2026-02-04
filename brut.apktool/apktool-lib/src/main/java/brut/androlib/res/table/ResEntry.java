@@ -23,49 +23,37 @@ import java.util.Objects;
 public class ResEntry {
     private final ResType mType;
     private final ResEntrySpec mSpec;
-    private ResValue mValue;
+    private ResValue mValue; // might be updated later
 
     public ResEntry(ResType type, ResEntrySpec spec, ResValue value) {
-        assert type.getSpec() == spec.getTypeSpec();
+        assert type != null && spec != null && type.getSpec() == spec.getTypeSpec() && value != null;
         mType = type;
         mSpec = spec;
         mValue = value;
-    }
-
-    public ResType getType() {
-        return mType;
     }
 
     public ResPackage getPackage() {
         return mType.getPackage();
     }
 
-    public ResTypeSpec getTypeSpec() {
-        return mType.getSpec();
-    }
-
-    public String getTypeName() {
-        return mType.getName();
-    }
-
-    public int getTypeId() {
-        return mType.getId();
-    }
-
-    public ResConfig getConfig() {
-        return mType.getConfig();
+    public ResType getType() {
+        return mType;
     }
 
     public ResEntrySpec getSpec() {
         return mSpec;
     }
 
-    public String getName() {
-        return mSpec.getName();
+    public int getId() {
+        return mSpec.getId();
     }
 
-    public ResId getId() {
-        return mSpec.getId();
+    public ResId getResId() {
+        return mSpec.getResId();
+    }
+
+    public String getName() {
+        return mSpec.getName();
     }
 
     public ResValue getValue() {
@@ -78,8 +66,7 @@ public class ResEntry {
 
     @Override
     public String toString() {
-        return String.format("ResEntry{type=%s, spec=%s, value=%s}",
-            mType, mSpec, mValue);
+        return String.format("ResEntry{type=%s, spec=%s, value=%s}", mType, mSpec, mValue);
     }
 
     @Override
@@ -89,8 +76,8 @@ public class ResEntry {
         }
         if (obj instanceof ResEntry) {
             ResEntry other = (ResEntry) obj;
-            return Objects.equals(mType, other.mType)
-                    && Objects.equals(mSpec, other.mSpec);
+            return mType.equals(other.mType)
+                && mSpec.equals(other.mSpec);
         }
         return false;
     }

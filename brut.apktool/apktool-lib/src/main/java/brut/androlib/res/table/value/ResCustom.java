@@ -28,7 +28,7 @@ public class ResCustom extends ResValue implements ValuesXmlSerializable {
     public static final ResCustom ID = new ResCustom("id");
 
     private final String mType;
-    private final String mValue;
+    private final Object mValue;
     private final boolean mAsItem;
 
     public ResCustom(String type) {
@@ -39,19 +39,19 @@ public class ResCustom extends ResValue implements ValuesXmlSerializable {
         this(type, null, asItem);
     }
 
-    public ResCustom(String type, String value) {
+    public ResCustom(String type, Object value) {
         this(type, value, false);
     }
 
-    public ResCustom(String type, String value, boolean asItem) {
+    public ResCustom(String type, Object value, boolean asItem) {
+        assert type != null;
         mType = type;
         mValue = value;
         mAsItem = asItem;
     }
 
     @Override
-    public void serializeToValuesXml(XmlSerializer serial, ResEntry entry)
-            throws AndrolibException, IOException {
+    public void serializeToValuesXml(XmlSerializer serial, ResEntry entry) throws AndrolibException, IOException {
         String tagName = mAsItem ? "item" : mType;
         serial.startTag(null, tagName);
         if (mAsItem) {
@@ -59,15 +59,14 @@ public class ResCustom extends ResValue implements ValuesXmlSerializable {
         }
         serial.attribute(null, "name", entry.getName());
         if (mValue != null) {
-            serial.text(mValue);
+            serial.text(mValue.toString());
         }
         serial.endTag(null, tagName);
     }
 
     @Override
     public String toString() {
-        return String.format("ResCustom{type=%s, value=%s, asItem=%s}",
-            mType, mValue, mAsItem);
+        return String.format("ResCustom{type=%s, value=%s, asItem=%s}", mType, mValue, mAsItem);
     }
 
     @Override
@@ -77,9 +76,9 @@ public class ResCustom extends ResValue implements ValuesXmlSerializable {
         }
         if (obj instanceof ResCustom) {
             ResCustom other = (ResCustom) obj;
-            return Objects.equals(mType, other.mType)
-                    && Objects.equals(mValue, other.mValue)
-                    && mAsItem == other.mAsItem;
+            return mType.equals(other.mType)
+                && Objects.equals(mValue, other.mValue)
+                && mAsItem == other.mAsItem;
         }
         return false;
     }

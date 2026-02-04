@@ -25,10 +25,8 @@ import brut.androlib.exceptions.InFileNotFoundException;
 import brut.androlib.exceptions.OutDirExistsException;
 import brut.androlib.res.AaptManager;
 import brut.androlib.res.Framework;
-import brut.directory.ExtFile;
 import brut.util.OSDetection;
 import org.apache.commons.cli.*;
-import org.apache.commons.io.IOUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -91,14 +89,14 @@ public class Main {
         .desc("Force delete destination directory.")
         .get();
 
+    private static final Option decodeAllSrcOption = Option.builder("a")
+        .longOpt("all-src")
+        .desc("Decode all sources in the apk (includes unknown dex files).")
+        .get();
+
     private static final Option decodeNoSrcOption = Option.builder("s")
         .longOpt("no-src")
         .desc("Do not decode sources.")
-        .get();
-
-    private static final Option decodeOnlyMainClassesOption = Option.builder()
-        .longOpt("only-main-classes")
-        .desc("Only disassemble the main dex classes (classes[0-9]*.dex) in the root.")
         .get();
 
     private static final Option decodeNoDebugInfoOption = Option.builder()
@@ -130,6 +128,11 @@ public class Main {
             + "\"Invalid resource config detected. Dropping resources\", but you\n"
             + "want to decode them anyway, even with errors. You will have to\n"
             + "fix them manually before building.")
+        .get();
+
+    private static final Option decodeIgnoreRawValuesOption = Option.builder()
+        .longOpt("ignore-raw-values")
+        .desc("Ignore raw attribute values in XML resource files.")
         .get();
 
     private static final Option decodeMatchOriginalOption = Option.builder()
@@ -248,6 +251,7 @@ public class Main {
         generalOptions.addOption(verboseOption);
 
         if (options == null || options == decodeOptions) {
+            decodeOptions.addOption(decodeAllSrcOption);
             decodeOptions.addOption(decodeForceOption);
             decodeOptions.addOption(decodeNoResOption);
             decodeOptions.addOption(decodeNoSrcOption);
@@ -257,11 +261,11 @@ public class Main {
             decodeOptions.addOption(jobsOption);
             decodeOptions.addOption(libOption);
             if (advanced) {
+                decodeOptions.addOption(decodeIgnoreRawValuesOption);
                 decodeOptions.addOption(decodeKeepBrokenResOption);
                 decodeOptions.addOption(decodeMatchOriginalOption);
                 decodeOptions.addOption(decodeNoAssetsOption);
                 decodeOptions.addOption(decodeNoDebugInfoOption);
-                decodeOptions.addOption(decodeOnlyMainClassesOption);
                 decodeOptions.addOption(decodeOnlyManifestOption);
                 decodeOptions.addOption(decodeResResolveModeOption);
             }
@@ -442,14 +446,14 @@ public class Main {
         if (cli.hasOption(decodeForceOption)) {
             config.setForced(true);
         }
-        if (cli.hasOption(decodeNoSrcOption)) {
-            config.setDecodeSources(Config.DecodeSources.NONE);
+        if (cli.hasOption(decodeAllSrcOption)) {
+            config.setDecodeSources(Config.DecodeSources.FULL);
         }
-        if (cli.hasOption(decodeOnlyMainClassesOption)) {
-            if (cli.hasOption(decodeNoSrcOption)) {
-                printOptionConflict(decodeOnlyMainClassesOption, decodeNoSrcOption);
+        if (cli.hasOption(decodeNoSrcOption)) {
+            if (cli.hasOption(decodeAllSrcOption)) {
+                printOptionConflict(decodeNoSrcOption, decodeAllSrcOption);
             } else {
-                config.setDecodeSources(Config.DecodeSources.ONLY_MAIN_CLASSES);
+                config.setDecodeSources(Config.DecodeSources.NONE);
             }
         }
         if (cli.hasOption(decodeNoDebugInfoOption)) {
@@ -503,6 +507,13 @@ public class Main {
                 config.setKeepBrokenResources(true);
             }
         }
+        if (cli.hasOption(decodeIgnoreRawValuesOption)) {
+            if (cli.hasOption(decodeNoResOption)) {
+                printOptionConflict(decodeIgnoreRawValuesOption, decodeNoResOption);
+            } else {
+                config.setIgnoreRawValues(true);
+            }
+        }
         if (cli.hasOption(decodeMatchOriginalOption)) {
             config.setAnalysisMode(true);
         }
@@ -519,11 +530,8 @@ public class Main {
                 : apkName + ".out");
         }
 
-        try (ExtFile apkFile = new ExtFile(apkName)) {
-            ApkDecoder decoder = new ApkDecoder(apkFile, config);
-            decoder.decode(outDir);
-        } catch (IOException ignored) {
-            // Input file could not be closed, just ignore.
+        try {
+            new ApkDecoder(new File(apkName), config).decode(outDir);
         } catch (InFileNotFoundException | OutDirExistsException | FrameworkNotFoundException ex) {
             System.err.println(ex.getMessage());
             System.exit(1);
@@ -608,9 +616,7 @@ public class Main {
             }
         }
 
-        ExtFile apkDir = new ExtFile(apkDirName);
-        ApkBuilder builder = new ApkBuilder(apkDir, config);
-        builder.build(outFile);
+        new ApkBuilder(new File(apkDirName), config).build(outFile);
     }
 
     private static void cmdInstallFramework(String[] args) throws AndrolibException {
@@ -818,37 +824,28 @@ public class Main {
         System.out.println(props.getVersion());
     }
 
-    private static void setupLogging(final Verbosity verbosity) {
-        Logger logger = Logger.getLogger("");
-        for (Handler handler : logger.getHandlers()) {
-            logger.removeHandler(handler);
-        }
+    private static void setupLogging(Verbosity verbosity) {
         LogManager.getLogManager().reset();
+        Logger logger = Logger.getLogger("");
 
         if (verbosity == Verbosity.QUIET) {
+            logger.setLevel(Level.OFF);
             return;
         }
 
         Handler handler = new Handler() {
             @Override
             public void publish(LogRecord record) {
-                if (getFormatter() == null) {
-                    setFormatter(new Formatter() {
-                        @Override
-                        public String format(LogRecord record) {
-                            return record.getLevel().toString().charAt(0) + ": "
-                                    + record.getMessage() + System.lineSeparator();
-                        }
-                    });
+                if (!isLoggable(record)) {
+                    return;
                 }
-
                 try {
                     String message = getFormatter().format(record);
                     int level = record.getLevel().intValue();
                     if (level >= Level.WARNING.intValue()) {
-                        System.err.write(message.getBytes());
-                    } else if (level >= Level.INFO.intValue() || verbosity == Verbosity.VERBOSE) {
-                        System.out.write(message.getBytes());
+                        System.err.println(message);
+                    } else {
+                        System.out.println(message);
                     }
                 } catch (Exception ex) {
                     reportError(null, ex, ErrorManager.FORMAT_FAILURE);
@@ -856,20 +853,35 @@ public class Main {
             }
 
             @Override
-            public void close() throws SecurityException {
+            public void flush() {
+                System.out.flush();
+                System.err.flush();
             }
 
             @Override
-            public void flush() {
+            public void close() throws SecurityException {
+                flush();
             }
         };
-
+        handler.setFormatter(new Formatter() {
+            @Override
+            public String format(LogRecord record) {
+                String prefix;
+                int level = record.getLevel().intValue();
+                if (level >= Level.SEVERE.intValue()) {
+                    prefix = "E";
+                } else if (level >= Level.WARNING.intValue()) {
+                    prefix = "W";
+                } else if (level >= Level.INFO.intValue()) {
+                    prefix = "I";
+                } else {
+                    prefix = "D";
+                }
+                return prefix + ": " + record.getMessage();
+            }
+        });
         logger.addHandler(handler);
-
-        if (verbosity == Verbosity.VERBOSE) {
-            handler.setLevel(Level.ALL);
-            logger.setLevel(Level.ALL);
-        }
+        logger.setLevel(verbosity == Verbosity.VERBOSE ? Level.ALL : Level.INFO);
     }
 
     private static class Props extends Properties {
@@ -905,17 +917,13 @@ public class Main {
         }
 
         private void load(Properties props, String name) {
-            InputStream in = null;
-            try {
-                in = Main.class.getResourceAsStream(name);
+            try (InputStream in = Main.class.getResourceAsStream(name)) {
                 if (in == null) {
                     throw new FileNotFoundException(name);
                 }
                 props.load(in);
             } catch (IOException ignored) {
-                System.out.println("Could not load " + name);
-            } finally {
-                IOUtils.closeQuietly(in);
+                System.err.println("Could not load resource: " + name);
             }
         }
     }
