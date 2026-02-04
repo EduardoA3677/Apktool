@@ -48,8 +48,9 @@ public class SmaliBuilder {
     private final int mApiLevel;
 
     public SmaliBuilder(int apiLevel) {
-        // #3641 - Limit opcode API level to 29 or below (dex version up to 039).
-        mApiLevel = Math.min(apiLevel, 29);
+        // Support for Android versions up to API 35 (Android 15) with smali 3.0.9
+        // API 36+ (Android 16+) will be supported as smali library is updated
+        mApiLevel = apiLevel;
     }
 
     public void build(File smaliDir, File dexFile) throws AndrolibException {
