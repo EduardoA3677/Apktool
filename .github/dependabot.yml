@@ -1,15 +1,45 @@
 version: 2
+
+# Define custom registries for dependency resolution
+registries:
+  google-maven:
+    type: maven-repository
+    url: https://dl.google.com/android/maven2
+
 updates:
+  # GitHub Actions dependencies
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
       time: "04:00"
       timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    rebase-strategy: auto
 
+  # Gradle dependencies (Java/Kotlin libraries)
   - package-ecosystem: gradle
     directory: /
     schedule:
       interval: weekly
+      day: monday
       time: "04:00"
       timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "gradle"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    rebase-strategy: auto
+    # Additional registries for dependency resolution
+    registries:
+      - google-maven
