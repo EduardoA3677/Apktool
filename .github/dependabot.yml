@@ -76,7 +76,7 @@ updates:
       # Gradle plugins and build tools
       gradle-plugins:
         patterns:
-          - "com.vanniktech.maven.publish:*"
+          - "com.vanniktech.maven.publish"
         update-types:
           - "minor"
           - "patch"
