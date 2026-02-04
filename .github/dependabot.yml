@@ -1,4 +1,11 @@
 version: 2
+
+# Define custom registries for dependency resolution
+registries:
+  google-maven:
+    type: maven-repository
+    url: https://dl.google.com/android/maven2
+
 updates:
   # GitHub Actions dependencies
   - package-ecosystem: github-actions
@@ -33,3 +40,6 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
     rebase-strategy: auto
+    # Additional registries for dependency resolution
+    registries:
+      - google-maven

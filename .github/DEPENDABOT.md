@@ -17,12 +17,23 @@ Dependabot is configured to monitor and update the following dependency types:
 - **Frequency**: Weekly (Mondays at 4:00 AM EST)
 - **Purpose**: Keeps Java/Kotlin library dependencies up to date
 - **Labels**: `dependencies`, `gradle`
+- **Registries**: Google Maven (for Android/smali dependencies)
 - **Monitored Files**:
   - `gradle/libs.versions.toml` (version catalog)
   - All `build.gradle.kts` files
   - `gradle/wrapper/gradle-wrapper.properties` (Gradle wrapper)
 
 ## Configuration Details
+
+### Custom Registries
+
+Dependabot is configured to use additional Maven registries beyond Maven Central:
+
+- **Google Maven** (`https://dl.google.com/android/maven2`)
+  - Required for Android tools and smali/baksmali dependencies
+  - Monitors packages: `com.android.tools.smali:*`, `com.android.tools:*`
+  
+This ensures Dependabot can find and suggest updates for all dependencies, including those published to Google's Maven repository.
 
 ### Pull Request Settings
 - **Maximum Open PRs**: 10 per ecosystem
