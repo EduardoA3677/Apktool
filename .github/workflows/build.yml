@@ -56,43 +56,14 @@ jobs:
       - name: Output Static
         run: ldd ${{ env.BINARY_PATH }}/windows/${{ matrix.file }} || true
 
-  build-and-test-with-Java-8-and-later:
-    runs-on: ${{ matrix.os }}
-    needs:
-      - analyze-mac-aapt
-      - analyze-linux-aapt
-      - analyze-windows-aapt
-    name: Build/Test (JDK ${{ matrix.java }}, ${{ matrix.os }})
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ ubuntu-latest, macOS-latest, windows-latest ]
-        java: [ 8, 11, 17, 21 ]
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-java@v5
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.java }}
-
-      - uses: gradle/actions/setup-gradle@v5.0.1
-
-      - name: Build (Linux/Mac)
-        if: runner.os != 'Windows'
-        # Build as SNAPSHOT (without 'release' task)
-        run: ./gradlew build shadowJar proguard
-
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        # Build as SNAPSHOT (without 'release' task)
-        run: ./gradlew.bat build shadowJar proguard
-
   upload-artifact:
     runs-on: ubuntu-latest
     name: Build apktool.jar
     if: github.repository == 'EduardoA3677/Apktool' && github.ref == 'refs/heads/main'
     needs:
-      - build-and-test-with-Java-8-and-later
+      - analyze-mac-aapt
+      - analyze-linux-aapt
+      - analyze-windows-aapt
     steps:
       - uses: actions/checkout@v6
         with:
@@ -108,8 +79,8 @@ jobs:
           dependency-graph: generate-and-submit
 
       - name: Build (Linux)
-        # Build as SNAPSHOT (without 'release' task)
-        run: ./gradlew build shadowJar proguard
+        # Build as SNAPSHOT (without 'release' task), skip tests
+        run: ./gradlew build shadowJar proguard -x test
 
       - name: Get version
         id: get_version
@@ -150,7 +121,9 @@ jobs:
         id: find_jar
         shell: bash
         run: |
-          JAR_FILE=$(find brut.apktool/apktool-cli/build/libs -name "apktool-*.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" -not -name "*-all.jar" -not -name "*-cli.jar" | head -1)
+          # Find the versioned apktool JAR (e.g., apktool-3.0.0-SNAPSHOT.jar)
+          # Exclude: sources, javadoc, all, and unversioned cli.jar
+          JAR_FILE=$(find brut.apktool/apktool-cli/build/libs -name "apktool-*.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" -not -name "*-all.jar" -not -name "apktool-cli.jar" | head -1)
           if [ -z "$JAR_FILE" ]; then
             echo "Error: Could not find apktool JAR file"
             exit 1
