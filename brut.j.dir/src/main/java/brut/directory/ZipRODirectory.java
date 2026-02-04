@@ -42,17 +42,9 @@ public class ZipRODirectory extends Directory {
     }
 
     public ZipRODirectory(File file, String path) throws DirectoryException {
-        ZipFile zipFile = null;
         try {
-            zipFile = new ZipFile(file);
-            mZipFile = zipFile;
+            mZipFile = new ZipFile(file);
         } catch (IOException ex) {
-            if (zipFile != null) {
-                try {
-                    zipFile.close();
-                } catch (IOException ignored) {
-                }
-            }
             throw new DirectoryException(ex);
         }
         mPath = path;
