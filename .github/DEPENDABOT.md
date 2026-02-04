@@ -29,16 +29,6 @@ Dependabot is configured to monitor and update the following dependency types:
 - **Rebase Strategy**: Automatic - PRs are automatically rebased when the base branch is updated
 - **Commit Message Format**: `chore(deps): update <dependency-name>`
 
-### Ignored Dependencies
-
-Some dependencies are configured to be ignored or have limited update types:
-
-1. **Smali/Baksmali Libraries** (`com.github.iBotPeaches.smali:*`)
-   - **Reason**: These use custom builds from JitPack due to upstream issues
-   - **Ignored Updates**: Major and minor version updates
-   - **Action Required**: These should be updated manually after verifying compatibility
-   - **Reference**: See comments in `gradle/libs.versions.toml` for more details
-
 ## How It Works
 
 1. **Automatic Scanning**: Dependabot scans the repository weekly on Mondays
@@ -55,10 +45,10 @@ All Dependabot PRs are automatically labeled for easy filtering:
 
 ## Manual Dependency Updates
 
-For dependencies that need manual updates:
+For manual dependency updates when needed:
 
-1. **Smali/Baksmali**: Update versions in `gradle/libs.versions.toml`
-2. **Gradle Wrapper**: Run `./gradlew wrapper --gradle-version=X.Y.Z`
+1. **Gradle Wrapper**: Run `./gradlew wrapper --gradle-version=X.Y.Z`
+2. **Other Dependencies**: Update versions in `gradle/libs.versions.toml`
 
 ## Additional Resources
 

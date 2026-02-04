@@ -33,8 +33,3 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
     rebase-strategy: auto
-    # Ignore specific dependencies that should be updated manually
-    ignore:
-      # Smali/baksmali are using custom builds from JitPack
-      - dependency-name: "com.github.iBotPeaches.smali:*"
-        update-types: ["version-update:semver-major", "version-update:semver-minor"]
