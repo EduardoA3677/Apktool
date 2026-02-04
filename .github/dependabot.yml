@@ -43,3 +43,31 @@ updates:
     # Additional registries for dependency resolution
     registries:
       - google-maven
+    # Group related dependencies together for efficient updates
+    groups:
+      # Apache Commons libraries
+      apache-commons:
+        patterns:
+          - "commons-io:commons-io"
+          - "commons-cli:commons-cli"
+          - "org.apache.commons:commons-lang3"
+          - "org.apache.commons:commons-text"
+      # Google dependencies
+      google-dependencies:
+        patterns:
+          - "com.google.guava:guava"
+          - "com.android.tools:r8"
+      # XML processing libraries
+      xml-dependencies:
+        patterns:
+          - "org.xmlunit:*"
+          - "xmlpull:xmlpull"
+      # Smali and Android build tools
+      smali-tools:
+        patterns:
+          - "com.android.tools.smali:*"
+      # Development and testing dependencies
+      dev-dependencies:
+        patterns:
+          - "junit:junit"
+          - "com.vanniktech.maven.publish:*"

@@ -40,6 +40,30 @@ This ensures Dependabot can find and suggest updates for all dependencies, inclu
 - **Rebase Strategy**: Automatic - PRs are automatically rebased when the base branch is updated
 - **Commit Message Format**: `chore(deps): update <dependency-name>`
 
+### Dependency Groups
+
+To efficiently manage updates and stay within the PR limit, related dependencies are grouped together:
+
+1. **Apache Commons** (`apache-commons`)
+   - commons-io, commons-cli, commons-lang3, commons-text
+   - Updates all Apache Commons libraries together in a single PR
+
+2. **Google Dependencies** (`google-dependencies`)
+   - guava, r8
+   - Updates Google-maintained libraries together
+
+3. **XML Dependencies** (`xml-dependencies`)
+   - xmlunit, xmlpull
+   - Updates XML processing libraries together
+
+4. **Smali Tools** (`smali-tools`)
+   - baksmali, smali, dexlib2
+   - Updates all Android smali tools together
+
+5. **Development Dependencies** (`dev-dependencies`)
+   - junit, maven-publish plugin
+   - Updates testing and build tools together
+
 ## How It Works
 
 1. **Automatic Scanning**: Dependabot scans the repository weekly on Mondays
