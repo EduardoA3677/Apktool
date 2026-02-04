@@ -105,8 +105,12 @@ public class SmaliDecoder {
 
             synchronized (mDexFiles) {
                 int apiLevel = dexFile.getOpcodes().api;
-                if (mInferredApiLevel == 0 || mInferredApiLevel > apiLevel) {
-                    mInferredApiLevel = apiLevel;
+                
+                // Validate and log API level information
+                int validatedApi = ApiLevelUtil.getValidatedApiLevel(apiLevel);
+                
+                if (mInferredApiLevel == 0 || mInferredApiLevel > validatedApi) {
+                    mInferredApiLevel = validatedApi;
                 }
 
                 mDexFiles.add(dexName);

@@ -63,15 +63,9 @@ plugins {
 
 allprojects {
     repositories {
+        mavenLocal() // Use local Maven for latest smali dev version
         mavenCentral()
-        // Obtain baksmali/smali from source builds - https://github.com/iBotPeaches/smali
-        // Remove when official smali releases come out again.
-        maven {
-            url = uri("https://jitpack.io")
-            content {
-                includeGroup("com.github.iBotPeaches.smali")
-            }
-        }
+        // Use official Google Maven repository for smali/baksmali
         google()
     }
 }
