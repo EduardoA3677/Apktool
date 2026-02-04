@@ -63,6 +63,7 @@ plugins {
 
 allprojects {
     repositories {
+        mavenLocal() // Use local Maven for latest smali dev version
         mavenCentral()
         // Use official Google Maven repository for smali/baksmali
         google()

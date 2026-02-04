@@ -48,9 +48,11 @@ public class SmaliBuilder {
     private final int mApiLevel;
 
     public SmaliBuilder(int apiLevel) {
-        // Support for Android versions up to API 35 (Android 15) with smali 3.0.9
-        // API 36+ (Android 16+) will be supported as smali library is updated
-        mApiLevel = apiLevel;
+        // Validate and normalize the API level for forward compatibility
+        // Supports Android 15 (API 35) with graceful degradation for future versions
+        int validatedApi = ApiLevelUtil.getValidatedApiLevel(apiLevel);
+        ApiLevelUtil.logApiLevelInfo(apiLevel, validatedApi);
+        mApiLevel = validatedApi;
     }
 
     public void build(File smaliDir, File dexFile) throws AndrolibException {
