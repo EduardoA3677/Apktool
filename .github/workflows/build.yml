@@ -103,15 +103,6 @@ jobs:
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
-          
-          # Determine if this is a release or snapshot
-          if [[ "$VERSION" == *SNAPSHOT* ]]; then
-            echo "is_snapshot=true" >> "$GITHUB_OUTPUT"
-            echo "This is a SNAPSHOT build"
-          else
-            echo "is_snapshot=false" >> "$GITHUB_OUTPUT"
-            echo "This is a RELEASE build"
-          fi
 
       - name: Find JAR file path
         id: find_jar
