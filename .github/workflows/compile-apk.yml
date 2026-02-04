@@ -364,7 +364,7 @@ jobs:
           echo "Final APK name: $FINAL_NAME"
 
       - name: Upload signed APK to artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.package-name.outputs.package }}_signed
           path: ${{ steps.rename-apk.outputs.final_name }}
