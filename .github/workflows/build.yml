@@ -60,10 +60,6 @@ jobs:
     runs-on: ubuntu-latest
     name: Build apktool.jar
     if: github.repository == 'EduardoA3677/Apktool' && github.ref == 'refs/heads/main'
-    needs:
-      - analyze-mac-aapt
-      - analyze-linux-aapt
-      - analyze-windows-aapt
     steps:
       - uses: actions/checkout@v6
         with:
