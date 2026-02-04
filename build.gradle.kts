@@ -14,7 +14,8 @@ val gitDescribe: String? by lazy {
     val stdout = ByteArrayOutputStream()
     try {
         rootProject.exec {
-            commandLine("git", "describe", "--tags")
+            // Exclude tags containing SNAPSHOT to avoid recursive version strings
+            commandLine("git", "describe", "--tags", "--match", "v*", "--exclude", "*SNAPSHOT*")
             standardOutput = stdout
         }
         stdout.toString().trim().replace("-g", "-")
