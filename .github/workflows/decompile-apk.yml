@@ -11,8 +11,6 @@ on:
         description: 'GitHub username where the repository will be created'
         required: true
         type: string
-        # Note: Ensure only trusted users can trigger this workflow as it creates
-        # repositories under the specified username using the TEST token
       quiet:
         description: 'Suppress normal output (-q/--quiet)'
         required: false
@@ -38,56 +36,16 @@ on:
         required: false
         type: string
         default: ''
-      no_res:
-        description: 'Do not decode resources (-r/--no-res)'
-        required: false
-        type: boolean
-        default: false
-      no_src:
-        description: 'Do not decode sources (-s/--no-src)'
-        required: false
-        type: boolean
-        default: false
-      only_main_classes:
-        description: 'Only disassemble main dex classes (--only-main-classes)'
-        required: false
-        type: boolean
-        default: false
       keep_debug_info:
         description: 'Include debug info in sources (default: disabled with --no-debug-info)'
         required: false
         type: boolean
         default: false
-      only_manifest:
-        description: 'Only decode AndroidManifest.xml (--only-manifest)'
+      advanced_options:
+        description: 'Additional apktool decode flags: -r/--no-res (skip resources), -s/--no-src (skip sources), -a/--all-src (decode all sources including unknown dex), --only-manifest (decode only AndroidManifest.xml), --res-resolve-mode <mode> (resource resolve mode: default/greedy/lazy), --keep-broken-res (keep broken resources), --ignore-raw-values (ignore raw XML attributes), --match-original (keep files closest to original), --no-assets (skip assets)'
         required: false
-        type: boolean
-        default: false
-      res_resolve_mode:
-        description: 'Resources resolve mode: default, greedy, or lazy (--res-resolve-mode)'
-        required: false
-        type: choice
-        options:
-          - ''
-          - default
-          - greedy
-          - lazy
+        type: string
         default: ''
-      keep_broken_res:
-        description: 'Keep broken resources (--keep-broken-res)'
-        required: false
-        type: boolean
-        default: false
-      match_original:
-        description: 'Keep files closest to original (--match-original)'
-        required: false
-        type: boolean
-        default: false
-      no_assets:
-        description: 'Do not decode assets (--no-assets)'
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   decompile-and-upload:
@@ -105,13 +63,13 @@ jobs:
           # Install zram-config if not available
           sudo apt-get update -qq
           # Configure zram to use 8GB of compressed RAM
-          sudo apt install linux-modules-extra-$(uname -r) zram-tools -y
+          sudo apt install "linux-modules-extra-$(uname -r)" zram-tools -y
           sudo modprobe zram
           sudo sed -i 's/^#PERCENT=50/PERCENT=90/' /etc/default/zramswap
           sudo sed -i 's/^#PRIORITY=100/PRIORITY=1000/' /etc/default/zramswap
           sudo systemctl restart zramswap
           zramctl
-          
+
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
@@ -121,37 +79,37 @@ jobs:
       - name: Download apktool from latest release
         run: |
           echo "Downloading apktool.jar and script from latest release..."
-          
+
           # Get the latest release info
           LATEST_RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
-          
+
           # Extract download URLs using jq for reliable JSON parsing
           JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -1)
           SCRIPT_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name == "apktool") | .browser_download_url' | head -1)
-          
+
           if [ -z "$JAR_URL" ] || [ -z "$SCRIPT_URL" ]; then
             echo "Error: Could not find apktool.jar or script in latest release"
             echo "JAR_URL: $JAR_URL"
             echo "SCRIPT_URL: $SCRIPT_URL"
             exit 1
           fi
-          
+
           echo "Downloading apktool.jar from: $JAR_URL"
           echo "Downloading apktool script from: $SCRIPT_URL"
-          
+
           # Create directory for apktool
           mkdir -p apktool-bin
-          
+
           # Download files
           curl -L -o apktool-bin/apktool.jar "$JAR_URL"
           curl -L -o apktool-bin/apktool "$SCRIPT_URL"
-          
+
           # Make the script executable
           chmod +x apktool-bin/apktool
-          
+
           # Add to PATH
-          echo "$GITHUB_WORKSPACE/apktool-bin" >> $GITHUB_PATH
-          
+          echo "$GITHUB_WORKSPACE/apktool-bin" >> "$GITHUB_PATH"
+
           # Verify setup
           ls -la apktool-bin/
           echo "Apktool downloaded and configured in PATH"
@@ -178,61 +136,61 @@ jobs:
       - name: Download APKEditor
         run: |
           echo "Downloading APKEditor.jar from latest release..."
-          
+
           # Check if jq is available, install if not
           if ! command -v jq &> /dev/null; then
             echo "jq is not installed, installing..."
             sudo apt-get update -qq && sudo apt-get install -y jq
           fi
-          
+
           # Get the latest release info from REAndroid/APKEditor
           LATEST_RELEASE=$(curl -s https://api.github.com/repos/REAndroid/APKEditor/releases/latest)
-          
+
           # Check if curl succeeded and returned valid JSON
           if [ -z "$LATEST_RELEASE" ] || ! echo "$LATEST_RELEASE" | jq empty 2>/dev/null; then
             echo "Error: Failed to fetch or parse release information from GitHub API"
             exit 1
           fi
-          
+
           # Extract download URL for APKEditor.jar (matches APKEditor-X.Y.Z.jar or APKEditor.jar)
           JAR_URL=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | test("^APKEditor(-[0-9]+\\.[0-9]+\\.[0-9]+)?\\.jar$")) | .browser_download_url' | head -1)
-          
+
           if [ -z "$JAR_URL" ] || [ "$JAR_URL" = "null" ]; then
             echo "Error: Could not find APKEditor.jar in latest release"
             echo "Available assets:"
             echo "$LATEST_RELEASE" | jq -r '.assets[].name' || echo "Failed to list assets"
             exit 1
           fi
-          
+
           echo "Downloading APKEditor.jar from: $JAR_URL"
-          
+
           # Download APKEditor
           curl -L -o APKEditor.jar "$JAR_URL"
-          
+
           # Verify download
           if [ ! -f APKEditor.jar ]; then
             echo "Error: Failed to download APKEditor.jar"
             exit 1
           fi
-          
+
           ls -lh APKEditor.jar
           echo "APKEditor downloaded successfully"
 
       - name: Download and convert APK
         run: |
           echo "Downloading file from ${{ github.event.inputs.apk_url }}"
-          
+
           # Download the file with a temporary name
           curl -L -o downloaded_file "${{ github.event.inputs.apk_url }}"
-          
+
           if [ ! -f downloaded_file ]; then
             echo "Error: Failed to download file"
             exit 1
           fi
-          
+
           echo "File downloaded successfully"
           ls -lh downloaded_file
-          
+
           # Extract filename from URL for extension detection
           # Note: This is only used for format detection, not for actual URL access
           URL_PATH="${{ github.event.inputs.apk_url }}"
@@ -242,13 +200,13 @@ jobs:
           URL_FILENAME="${URL_FILENAME%%[?#]*}"
           # Convert to lowercase for case-insensitive extension matching
           URL_FILENAME_LOWER=$(echo "$URL_FILENAME" | tr '[:upper:]' '[:lower:]')
-          
+
           echo "Detected filename: $URL_FILENAME_LOWER"
-          
+
           # Check file type using file command for additional validation
           FILE_TYPE=$(file -b --mime-type downloaded_file)
           echo "Detected MIME type: $FILE_TYPE"
-          
+
           # Check if the file is APKM, APKS, or XAPK (these are typically zip files)
           # We check both the extension and verify it's a zip file
           case "$URL_FILENAME_LOWER" in
@@ -256,22 +214,22 @@ jobs:
               # Verify the file is actually a zip file
               if [[ "$FILE_TYPE" == "application/zip" ]] || [[ "$FILE_TYPE" == "application/java-archive" ]]; then
                 echo "Detected split APK format (APKM/APKS/XAPK) from URL extension, converting to APK..."
-                
+
                 # Use APKEditor to merge the split APK files into a single APK
                 echo "Running: java -jar APKEditor.jar m -i downloaded_file -o app.apk"
                 if ! java -jar APKEditor.jar m -i downloaded_file -o app.apk; then
                   echo "Error: APKEditor failed to convert split APK to APK"
                   exit 1
                 fi
-                
+
                 if [ ! -f app.apk ]; then
                   echo "Error: Failed to convert split APK to APK - output file not created"
                   exit 1
                 fi
-                
+
                 echo "Conversion completed successfully"
                 ls -lh app.apk
-                
+
                 # Clean up the original downloaded file
                 rm -f downloaded_file
               else
@@ -286,13 +244,13 @@ jobs:
               mv downloaded_file app.apk
               ;;
           esac
-          
+
           # Verify final APK exists
           if [ ! -f app.apk ]; then
             echo "Error: app.apk not found after processing"
             exit 1
           fi
-          
+
           echo "Final APK ready for decompilation"
           ls -lh app.apk
 
@@ -302,31 +260,31 @@ jobs:
           # Build apktool command with optional parameters using array
           # Note: --no-debug-info is controlled by keep_debug_info input
           CMD=(apktool d -o decompiled -t dm2q -p apktool-frameworks)
-          
+
           # Check mutual exclusivity of quiet and verbose flags
           if [ "${{ github.event.inputs.quiet }}" = "true" ] && [ "${{ github.event.inputs.verbose }}" = "true" ]; then
             echo "Error: quiet and verbose flags are mutually exclusive"
             exit 1
           fi
-          
+
           # Add optional quiet flag
           if [ "${{ github.event.inputs.quiet }}" = "true" ]; then
             CMD+=(-q)
             echo "Using quiet mode (-q)"
           fi
-          
+
           # Add optional verbose flag
           if [ "${{ github.event.inputs.verbose }}" = "true" ]; then
             CMD+=(-v)
             echo "Using verbose mode (-v)"
           fi
-          
+
           # Add optional force flag
           if [ "${{ github.event.inputs.force }}" = "true" ]; then
             CMD+=(-f)
             echo "Using force mode (-f)"
           fi
-          
+
           # Add optional jobs parameter with validation
           if [ -n "${{ github.event.inputs.jobs }}" ]; then
             # Validate that jobs is a non-negative integer (0 means auto-detect)
@@ -341,7 +299,7 @@ jobs:
               echo "Using ${{ github.event.inputs.jobs }} parallel jobs"
             fi
           fi
-          
+
           # Add optional lib parameter (can be multiple, comma-separated) with validation
           if [ -n "${{ github.event.inputs.lib }}" ]; then
             IFS=',' read -ra LIBS <<< "${{ github.event.inputs.lib }}"
@@ -362,29 +320,7 @@ jobs:
               echo "Using shared library: $lib"
             done
           fi
-          
-          # Add optional no-resources flag
-          if [ "${{ github.event.inputs.no_res }}" = "true" ]; then
-            CMD+=(-r)
-            echo "Skipping resource decoding (-r)"
-          fi
-          
-          # Add optional no-sources flag
-          if [ "${{ github.event.inputs.no_src }}" = "true" ]; then
-            CMD+=(-s)
-            echo "Skipping source decoding (-s)"
-          fi
-          
-          # Add optional only-main-classes flag
-          if [ "${{ github.event.inputs.only_main_classes }}" = "true" ]; then
-            if [ "${{ github.event.inputs.no_src }}" = "true" ]; then
-              echo "Error: only-main-classes conflicts with no-src"
-              exit 1
-            fi
-            CMD+=(--only-main-classes)
-            echo "Only disassembling main dex classes (--only-main-classes)"
-          fi
-          
+
           # Add no-debug-info flag (default behavior unless keep_debug_info is true)
           if [ "${{ github.event.inputs.keep_debug_info }}" != "true" ]; then
             CMD+=(--no-debug-info)
@@ -392,72 +328,39 @@ jobs:
           else
             echo "Keeping debug info in sources"
           fi
-          
-          # Add optional only-manifest flag
-          if [ "${{ github.event.inputs.only_manifest }}" = "true" ]; then
-            if [ "${{ github.event.inputs.no_res }}" = "true" ]; then
-              echo "Error: only-manifest conflicts with no-res"
+
+          # Add advanced options if provided
+          if [ -n "${{ github.event.inputs.advanced_options }}" ]; then
+            echo "Adding advanced options: ${{ github.event.inputs.advanced_options }}"
+            # Valid apktool decode flags (from Main.java):
+            # -r/--no-res, -s/--no-src, -a/--all-src, --only-manifest,
+            # --res-resolve-mode <mode>, --keep-broken-res, --ignore-raw-values,
+            # --match-original, --no-assets
+            # Basic validation: ensure no dangerous characters or command injection
+            if [[ "${{ github.event.inputs.advanced_options }}" =~ [';|&$`<>'] ]]; then
+              echo "Error: advanced_options contains potentially dangerous characters"
               exit 1
             fi
-            CMD+=(--only-manifest)
-            echo "Only decoding AndroidManifest.xml (--only-manifest)"
+            read -ra ADV_OPTS <<< "${{ github.event.inputs.advanced_options }}"
+            # Validate each flag against known apktool decode options
+            VALID_FLAGS="-r --no-res -s --no-src -a --all-src --only-manifest --res-resolve-mode --keep-broken-res --ignore-raw-values --match-original --no-assets default greedy lazy"
+            for opt in "${ADV_OPTS[@]}"; do
+              if [[ "$opt" =~ ^- ]]; then
+                # Check if flag is in valid list (skip mode values like default/greedy/lazy)
+                if ! echo "$VALID_FLAGS" | grep -qw -e "$opt"; then
+                  echo "Warning: '$opt' is not a recognized apktool decode flag. Valid flags are: -r/--no-res, -s/--no-src, -a/--all-src, --only-manifest, --res-resolve-mode <mode>, --keep-broken-res, --ignore-raw-values, --match-original, --no-assets"
+                fi
+              fi
+            done
+            CMD+=("${ADV_OPTS[@]}")
           fi
-          
-          # Add optional res-resolve-mode
-          if [ -n "${{ github.event.inputs.res_resolve_mode }}" ]; then
-            if [ "${{ github.event.inputs.no_res }}" = "true" ]; then
-              echo "Error: res-resolve-mode conflicts with no-res"
-              exit 1
-            fi
-            if [ "${{ github.event.inputs.only_manifest }}" = "true" ]; then
-              echo "Error: res-resolve-mode conflicts with only-manifest"
-              exit 1
-            fi
-            # Validate res_resolve_mode value
-            case "${{ github.event.inputs.res_resolve_mode }}" in
-              default|greedy|lazy)
-                CMD+=(--res-resolve-mode "${{ github.event.inputs.res_resolve_mode }}")
-                echo "Using resource resolve mode: ${{ github.event.inputs.res_resolve_mode }}"
-                ;;
-              *)
-                echo "Error: Invalid res-resolve-mode. Must be 'default', 'greedy', or 'lazy'"
-                exit 1
-                ;;
-            esac
-          fi
-          
-          # Add optional keep-broken-res flag
-          if [ "${{ github.event.inputs.keep_broken_res }}" = "true" ]; then
-            if [ "${{ github.event.inputs.no_res }}" = "true" ]; then
-              echo "Error: keep-broken-res conflicts with no-res"
-              exit 1
-            fi
-            if [ "${{ github.event.inputs.only_manifest }}" = "true" ]; then
-              echo "Error: keep-broken-res conflicts with only-manifest"
-              exit 1
-            fi
-            CMD+=(--keep-broken-res)
-            echo "Keeping broken resources (--keep-broken-res)"
-          fi
-          
-          # Add optional match-original flag
-          if [ "${{ github.event.inputs.match_original }}" = "true" ]; then
-            CMD+=(--match-original)
-            echo "Keeping files closest to original (--match-original)"
-          fi
-          
-          # Add optional no-assets flag
-          if [ "${{ github.event.inputs.no_assets }}" = "true" ]; then
-            CMD+=(--no-assets)
-            echo "Skipping asset decoding (--no-assets)"
-          fi
-          
+
           # Add APK file at the end
           CMD+=(app.apk)
-          
-          echo "Executing: ${CMD[@]}"
+
+          echo "Executing: ${CMD[*]}"
           "${CMD[@]}"
-          
+
           if [ ! -d decompiled ]; then
             echo "Error: Decompilation failed"
             exit 1
@@ -476,8 +379,8 @@ jobs:
             fi
             # Replace dots with underscores
             REPO_NAME=$(echo "$PACKAGE" | tr '.' '_')
-            echo "package=$PACKAGE" >> $GITHUB_OUTPUT
-            echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+            echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
+            echo "repo_name=$REPO_NAME" >> "$GITHUB_OUTPUT"
             echo "Package: $PACKAGE"
             echo "Repository name: $REPO_NAME"
           else
@@ -505,7 +408,7 @@ jobs:
           echo "Creating repository: $TARGET_USER/$REPO_NAME"
           gh repo create "$TARGET_USER/$REPO_NAME" --public --description "Decompiled APK: ${{ steps.package-name.outputs.package }}"
 
-          echo "final_repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "final_repo_name=$REPO_NAME" >> "$GITHUB_OUTPUT"
           echo "Repository created: $TARGET_USER/$REPO_NAME"
 
       - name: Configure Git
@@ -522,17 +425,17 @@ jobs:
       - name: Track large files with Git LFS
         run: |
           cd decompiled
-          
+
           # Initialize git repository first (needed for git lfs)
           git init
-          
+
           # Initialize Git LFS
           git lfs install
-          
+
           # Find files larger than 99MB and track them with Git LFS
           echo "Scanning for files larger than 99MB..."
           LARGE_FILES_FOUND=false
-          
+
           # Find files larger than 99MB (99 * 1024 * 1024 bytes = 103,809,024 bytes = 99 MiB)
           # Using MiB (binary) threshold to stay safely under GitHub's 100MB limit
           while IFS= read -r -d '' file; do
@@ -543,13 +446,13 @@ jobs:
                 # Calculate size in MB for display (without bc dependency)
                 size_mb=$((size / 1024 / 1024))
                 echo "Found large file: $file (${size_mb}MB)"
-                
+
                 # Track this file pattern with git lfs
                 git lfs track "$file"
               fi
             fi
           done < <(find . -type f -print0)
-          
+
           if [ "$LARGE_FILES_FOUND" = true ]; then
             echo "✅ Large files tracked with Git LFS"
             echo "Git LFS tracking patterns:"
@@ -565,10 +468,10 @@ jobs:
           REPO_NAME: ${{ steps.create-repo.outputs.final_repo_name }}
         run: |
           cd decompiled
-          
+
           # Add all files (git lfs will handle large files automatically)
           git add .
-          
+
           # Commit with information about large files if any
           if [ -f .gitattributes ]; then
             git commit -m "Initial commit: Decompiled APK (${{ steps.package-name.outputs.package }})" \
@@ -576,11 +479,11 @@ jobs:
           else
             git commit -m "Initial commit: Decompiled APK (${{ steps.package-name.outputs.package }})"
           fi
-          
+
           # Configure remote and push
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/$TARGET_USER/$REPO_NAME.git"
           git branch -M main
-          
+
           # Push to remote (Git LFS pre-push hook will automatically handle LFS files)
           echo "Pushing content to repository..."
           git push -u origin main
@@ -589,9 +492,11 @@ jobs:
 
       - name: Summary
         run: |
-          echo "## Decompilation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Package**: ${{ steps.package-name.outputs.package }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Repository**: [${{ github.event.inputs.target_username }}/${{ steps.create-repo.outputs.final_repo_name }}](https://github.com/${{ github.event.inputs.target_username }}/${{ steps.create-repo.outputs.final_repo_name }})" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Decompilation completed successfully!" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Decompilation Summary"
+            echo ""
+            echo "- **Package**: ${{ steps.package-name.outputs.package }}"
+            echo "- **Repository**: [${{ github.event.inputs.target_username }}/${{ steps.create-repo.outputs.final_repo_name }}](https://github.com/${{ github.event.inputs.target_username }}/${{ steps.create-repo.outputs.final_repo_name }})"
+            echo ""
+            echo "✅ Decompilation completed successfully!"
+          } >> "$GITHUB_STEP_SUMMARY"
