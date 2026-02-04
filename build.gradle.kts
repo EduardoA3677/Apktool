@@ -42,7 +42,7 @@ if ("release" !in gradle.startParameter.taskNames) {
 
     if (hash == null) {
         gitRevision = "dirty"
-        apktoolVersion = "$version-dirty"
+        apktoolVersion = "$version-$suffix"
         project.logger.lifecycle("Building SNAPSHOT (no .git folder found)")
     } else {
         gitRevision = hash
