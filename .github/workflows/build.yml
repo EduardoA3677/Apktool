@@ -116,6 +116,7 @@ jobs:
 
       - name: Get version
         id: get_version
+        shell: bash
         run: |
           # Extract version using Gradle to ensure consistency with build process
           VERSION=$(./gradlew -q printVersion 2>/dev/null || echo "")
@@ -150,6 +151,7 @@ jobs:
 
       - name: Find JAR file path
         id: find_jar
+        shell: bash
         run: |
           JAR_FILE=$(find brut.apktool/apktool-cli/build/libs -name "apktool-*.jar" -not -name "*-sources.jar" -not -name "*-javadoc.jar" -not -name "*-all.jar" | head -1)
           if [ -z "$JAR_FILE" ]; then
