@@ -191,8 +191,8 @@ public class AaptInvoker {
         }
 
         if (mConfig.isShortenResPaths() || mConfig.isEnableSparseEncoding() || mConfig.isCollapseResNames()) {
-            Path inputFilePath = new File(apkFile.getParent(), apkFile.getName() + ".tmp").toPath();
-            Path apkFilePath = apkFile.toPath();
+            Path inputFilePath = new File(outApk.getParent(), outApk.getName() + ".tmp").toPath();
+            Path apkFilePath = outApk.toPath();
             try {
                 Files.copy(apkFilePath, inputFilePath, StandardCopyOption.REPLACE_EXISTING);
                 Files.delete(apkFilePath);
@@ -223,8 +223,8 @@ public class AaptInvoker {
 
             try {
                 OS.exec(cmd.toArray(new String[0]));
-                LOGGER.fine("aapt2 optimize command ran: ");
-                LOGGER.fine(cmd.toString());
+                Log.i(TAG, "aapt2 optimize command ran");
+                Log.i(TAG, cmd.toString());
             } catch (BrutException ex) {
                 throw new AndrolibException(ex);
             }
