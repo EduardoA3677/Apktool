@@ -22,8 +22,41 @@ Dependabot is configured to monitor and update the following dependency types:
   - `gradle/libs.versions.toml` (version catalog)
   - All `build.gradle.kts` files
   - `gradle/wrapper/gradle-wrapper.properties` (Gradle wrapper)
+- **Scope**: Monitors ALL dependency types:
+  - Production dependencies
+  - Development/test dependencies (JUnit, XMLUnit)
+  - Gradle plugins (Vanniktech Maven Publish)
+  - Gradle wrapper version
+  - Build tools (R8, smali tools)
 
 ## Configuration Details
+
+### Comprehensive Dependency Coverage
+
+This Dependabot configuration ensures **complete coverage** of all project dependencies:
+
+#### ✅ All 11 Production Dependencies Monitored:
+1. ✓ commons-io (Apache Commons group)
+2. ✓ commons-cli (Apache Commons group)
+3. ✓ commons-lang3 (Apache Commons group)
+4. ✓ commons-text (Apache Commons group)
+5. ✓ guava (Google dependencies group)
+6. ✓ r8 (Google dependencies group)
+7. ✓ xmlunit (XML dependencies group)
+8. ✓ xmlpull (XML dependencies group)
+9. ✓ baksmali (Smali tools group)
+10. ✓ smali (Smali tools group)
+11. ✓ dexlib2 (Smali tools group)
+
+#### ✅ Development Dependencies:
+- ✓ junit (Dev dependencies group)
+
+#### ✅ Build Tools:
+- ✓ Gradle wrapper (monitored separately)
+- ✓ Vanniktech Maven Publish plugin (Gradle plugins group)
+
+#### ✅ GitHub Actions:
+- ✓ All workflow actions monitored weekly
 
 ### Custom Registries
 
@@ -39,6 +72,36 @@ This ensures Dependabot can find and suggest updates for all dependencies, inclu
 - **Maximum Open PRs**: 10 per ecosystem
 - **Rebase Strategy**: Automatic - PRs are automatically rebased when the base branch is updated
 - **Commit Message Format**: `chore(deps): update <dependency-name>`
+
+### Dependency Groups
+
+To efficiently manage updates and stay within the PR limit, related dependencies are grouped together:
+
+1. **Apache Commons** (`apache-commons`)
+   - commons-io, commons-cli, commons-lang3, commons-text
+   - Updates all Apache Commons libraries together in a single PR
+
+2. **Google Dependencies** (`google-dependencies`)
+   - guava, r8
+   - Updates Google-maintained libraries together
+
+3. **XML Dependencies** (`xml-dependencies`)
+   - xmlunit, xmlpull
+   - Updates XML processing libraries together
+
+4. **Smali Tools** (`smali-tools`)
+   - baksmali, smali, dexlib2
+   - Updates all Android smali tools together
+
+5. **Development Dependencies** (`dev-dependencies`)
+   - junit
+   - Updates testing frameworks together
+
+6. **Gradle Plugins** (`gradle-plugins`)
+   - vanniktech-maven-publish
+   - Updates Gradle plugins (minor and patch versions only)
+
+**Note**: Gradle wrapper updates are handled separately and not included in groups to ensure they can be tested independently.
 
 ## How It Works
 
