@@ -54,12 +54,7 @@ public final class ZipUtils {
             return;
         }
 
-        File[] files = dir.listFiles();
-        if (files == null) {
-            return;
-        }
-
-        for (File file : files) {
+        for (File file : dir.listFiles()) {
             String fileName = baseDir.toPath().relativize(file.toPath()).toString();
 
             if (file.isDirectory()) {
