@@ -18,8 +18,8 @@ fun executeGit(vararg args: String): String? {
             .start()
         
         val output = process.inputStream.bufferedReader().use { it.readText().trim() }
-        process.waitFor()
-        if (process.exitValue() == 0) output else null
+        val exitCode = process.waitFor()
+        if (exitCode == 0) output else null
     } catch (e: Exception) {
         null
     }
