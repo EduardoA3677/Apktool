@@ -33,6 +33,15 @@ public final class BrutIO {
         // Private constructor for utility class.
     }
 
+    /**
+     * Reads all bytes from an InputStream and closes it.
+     * This is a convenience method that ensures the stream is properly closed
+     * even if an error occurs during reading.
+     *
+     * @param in The InputStream to read from (will be closed after reading)
+     * @return The bytes read from the stream
+     * @throws IOException if an I/O error occurs
+     */
     public static byte[] readAndClose(InputStream in) throws IOException {
         try {
             return IOUtils.toByteArray(in);
@@ -41,6 +50,15 @@ public final class BrutIO {
         }
     }
 
+    /**
+     * Copies all bytes from an InputStream to an OutputStream and closes both streams.
+     * This is a convenience method that ensures both streams are properly closed
+     * even if an error occurs during copying.
+     *
+     * @param in The InputStream to read from (will be closed after copying)
+     * @param out The OutputStream to write to (will be closed after copying)
+     * @throws IOException if an I/O error occurs
+     */
     public static void copyAndClose(InputStream in, OutputStream out) throws IOException {
         try {
             IOUtils.copy(in, out);
@@ -87,6 +105,17 @@ public final class BrutIO {
         return crc;
     }
 
+    /**
+     * Sanitizes and validates a file path to prevent directory traversal attacks.
+     * This method ensures that the provided path does not contain absolute paths
+     * or path traversal sequences that could escape the base directory.
+     *
+     * @param baseDir The base directory that the path should be relative to
+     * @param path The path to sanitize (must be relative)
+     * @return The sanitized path relative to the base directory
+     * @throws InvalidPathException if the path is absolute, null, empty, or attempts to traverse outside the base directory
+     * @throws IOException if an I/O error occurs while resolving the canonical path
+     */
     public static String sanitizePath(File baseDir, String path) throws InvalidPathException, IOException {
         if (path == null || path.isEmpty()) {
             throw new InvalidPathException(path, "Path is null or empty.");
