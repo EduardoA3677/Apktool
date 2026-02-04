@@ -82,4 +82,28 @@ public class InvalidSdkBoundingTest extends BaseTest {
 
         assertEquals("10000", sdkInfo.getTargetSdkVersionBounded());
     }
+
+    @Test
+    public void checkForSdkCodenameVanillaIceCream() {
+        SdkInfo sdkInfo = new SdkInfo();
+        sdkInfo.setTargetSdkVersion("VANILLA_ICE_CREAM");
+
+        assertEquals("35", sdkInfo.getTargetSdkVersionBounded());
+    }
+
+    @Test
+    public void checkForSdkCodenameBaklava() {
+        SdkInfo sdkInfo = new SdkInfo();
+        sdkInfo.setTargetSdkVersion("BAKLAVA");
+
+        assertEquals("36", sdkInfo.getTargetSdkVersionBounded());
+    }
+
+    @Test
+    public void checkForSdk36NumericValue() {
+        SdkInfo sdkInfo = new SdkInfo();
+        sdkInfo.setTargetSdkVersion("36");
+
+        assertEquals("36", sdkInfo.getTargetSdkVersionBounded());
+    }
 }

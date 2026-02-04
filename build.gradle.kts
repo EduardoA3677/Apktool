@@ -13,7 +13,7 @@ defaultTasks("build", "shadowJar", "proguard")
 val gitDescribe: String? by lazy {
     val stdout = ByteArrayOutputStream()
     try {
-        rootProject.exec {
+        providers.exec {
             commandLine("git", "describe", "--tags")
             standardOutput = stdout
         }
@@ -26,7 +26,7 @@ val gitDescribe: String? by lazy {
 val gitBranch: String? by lazy {
     val stdout = ByteArrayOutputStream()
     try {
-        rootProject.exec {
+        providers.exec {
             commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
             standardOutput = stdout
         }
@@ -64,8 +64,7 @@ plugins {
 allprojects {
     repositories {
         mavenCentral()
-        // Obtain baksmali/smali from source builds - https://github.com/iBotPeaches/smali
-        // Remove when official smali releases come out again.
+        // Obtain baksmali/smali from iBotPeaches fork with compatibility patches
         maven {
             url = uri("https://jitpack.io")
             content {
