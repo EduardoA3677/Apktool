@@ -10,28 +10,33 @@ var apktoolVersion by extra("")
 defaultTasks("build", "shadowJar", "proguard")
 
 // Functions
+fun executeGit(vararg args: String): String? {
+    return try {
+        val process = ProcessBuilder(*args)
+            .directory(rootDir)
+            .redirectErrorStream(true)
+            .start()
+        
+        val output = process.inputStream.bufferedReader().use { it.readText().trim() }
+        process.waitFor()
+        if (process.exitValue() == 0) output else null
+    } catch (e: Exception) {
+        null
+    }
+}
+
 val gitDescribe: String? by lazy {
-    val stdout = ByteArrayOutputStream()
     try {
-        rootProject.exec {
-            // Exclude tags containing SNAPSHOT to avoid recursive version strings
-            commandLine("git", "describe", "--tags", "--match", "v*", "--exclude", "*SNAPSHOT*")
-            standardOutput = stdout
-        }
-        stdout.toString().trim().replace("-g", "-")
+        val output = executeGit("git", "describe", "--tags", "--match", "v*", "--exclude", "*SNAPSHOT*")
+        output?.replace("-g", "-")
     } catch (e: Exception) {
         null
     }
 }
 
 val gitBranch: String? by lazy {
-    val stdout = ByteArrayOutputStream()
     try {
-        rootProject.exec {
-            commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
-            standardOutput = stdout
-        }
-        stdout.toString().trim()
+        executeGit("git", "rev-parse", "--abbrev-ref", "HEAD")
     } catch (e: Exception) {
         null
     }
@@ -88,7 +93,7 @@ subprojects {
     }
 }
 
-task("release") {
+tasks.register("release") {
     // Used for official releases.
 }
 
